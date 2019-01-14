@@ -1,7 +1,7 @@
 # WYOUNG: control the family-wise error rate when performing multiple hypothesis tests
 
 - Current version: `1.0.3 19jun2018`
-- Jump to: [`updates`](#recent-updates) [`install`](#install) [`description`](#description) [`citation`](#citation) [`author`](#author)
+- Jump to: [`updates`](#recent-updates) [`install`](#install) [`description`](#description) [`citation`](#citation)
 
 -----------
 
@@ -35,11 +35,6 @@ For more details, see the Stata help file included in this package. Additional d
 ## Citation: 
 
 `wyoung` is not an official Stata command. It is a free contribution to the research community. You may cite it as:
-    Jones, D., D. Molitor, and J. Reif. 2018. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." *National Bureau of Economic Research Working Paper No. 24229*.
 
+Jones, D., D. Molitor, and J. Reif. 2018. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." *National Bureau of Economic Research Working Paper No. 24229*.
 
-## Author:
-
-[Julian Reif](http://www.julianreif.com)
-<br>University of Illinois
-<br>jreif@illinois.edu
