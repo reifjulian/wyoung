@@ -1,0 +1,32 @@
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage[margin=1in]{geometry}
+\begin{document}
+
+\begin{table}[tbp] \centering
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+
+\caption{Family-wise rejection proportions at \(\alpha = 0.05\), when the data generating process is serially correlated}
+\label{tab:wyoung2}
+\begin{tabularx}{\textwidth}{lCCC}
+
+\toprule
+&{(1)}&{(2)}&{(3)} \tabularnewline
+\midrule\addlinespace[1.5ex]
+Unadjusted&0.652&0.401&0.401 \tabularnewline
+Bonferroni-Holm&0.187&0.049&0.049 \tabularnewline
+Sidak-Holm&0.188&0.049&0.049 \tabularnewline
+Westfall-Young&0.191&0.498&0.046 \tabularnewline
+\midrule Num. observations&1,000&1,000&1,000 \tabularnewline
+Num. hypotheses&10&10&10 \tabularnewline
+Model std. errors&Homoskedastic&Clustered&Clustered \tabularnewline
+Cluster bootstrap&N&N&Y \tabularnewline
+\bottomrule \addlinespace[1.5ex]
+
+\end{tabularx}
+\begin{flushleft}
+\footnotesize Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. The difference between columns (1) and (2) is the assumption about the standard errors (homoskedastic or clustered). The difference between columns (2) and (3) is the method of bootstrapping (resampling over individual observations versus clusters), which matters only for the Westfall-Young correction. All null hypotheses are true, i.e., lower rejection rates are better. Each simulation generated 100 panels (clusters) with 10 time periods. The Westfall-Young correction is performed using 1,000 bootstraps.
+\end{flushleft}
+\end{table}
+\end{document}
