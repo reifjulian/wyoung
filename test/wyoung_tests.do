@@ -10,28 +10,28 @@ program drop _all
 *********************************************
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace
-cf _all using "templates/examp1.dta"
+cf _all using "compare/examp1.dta"
 
 * Quotes are unnecessary in -cmd-
 sysuse auto, clear
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100) seed(20) replace
-cf _all using "templates/examp1.dta"
+cf _all using "compare/examp1.dta"
 
 * Resampling option
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace noresampling
-cf _all using "templates/examp1.dta"
+cf _all using "compare/examp1.dta"
 
 * Compound double quotes
 sysuse auto, clear
 wyoung, cmd(`" `""regress mpg displacement length""' `""regress headroom displacement length""' `""regress turn displacement length""' "') familyp(displacement) bootstraps(100) seed(20) replace
-cf _all using "templates/examp1.dta"
+cf _all using "compare/examp1.dta"
 
 * Compound double quotes with clustering
 sysuse auto, clear
 wyoung, cmd(`" `""regress mpg displacement length, cluster(foreign)""' `""regress headroom displacement length, cluster(foreign)""' `""regress turn displacement length, cluster(foreign)""' "') cluster(foreign) familyp(displacement) bootstraps(10) seed(20) replace
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "templates/examp1_cluster.dta", assert(match) nogenerate
+merge 1:1 k model outcome regressor using "compare/examp1_cluster.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
@@ -41,14 +41,14 @@ foreach v of varlist p* {
 *********************************************
 sysuse auto, clear
 wyoung, cmd("regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length") familyp(displacement) bootstraps(100) seed(20) replace
-cf _all using "templates/examp1.dta"
+cf _all using "compare/examp1.dta"
 
 *********************************************
 * Example 3 (clustered standard errors)
 *********************************************
 sysuse auto, clear
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement) bootstraps(100) seed(20)
-cf _all using "templates/examp3.dta"
+cf _all using "compare/examp3.dta"
 
 * Failing to specify bootwstrap cluster should generate an error when clustering, unless force option is specified
 cap wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) familyp(displacement) bootstraps(10) seed(20)
@@ -61,30 +61,30 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(re
 
 sysuse auto, clear
 wyoung, cmd("regress mpg displacement length if foreign==0" "regress headroom displacement length if foreign==0" "regress mpg displacement length if foreign==1" "regress headroom displacement length if foreign==1" ) familyp(displacement) bootstraps(100) seed(20) detail replace
-cf _all using "templates/examp_subgroups.dta"
+cf _all using "compare/examp_subgroups.dta"
 
 * Same, but with compound quoted strings
 sysuse auto, clear
 wyoung, cmd(`" `""regress mpg displacement length if foreign=="Domestic":origin""' `""regress headroom displacement length if foreign=="Domestic":origin""' `""regress mpg displacement length if foreign=="Foreign":origin""' `""regress headroom displacement length if foreign=="Foreign":origin""' "' ) familyp(displacement) bootstraps(100) seed(20) detail replace
-cf outcome-psidak using "templates/examp_subgroups.dta"
+cf outcome-psidak using "compare/examp_subgroups.dta"
 
 * Stratified random sample example
 sysuse auto, clear
 wyoung, cmd("regress mpg displacement length if foreign==0" "regress headroom displacement length if foreign==0" "regress mpg displacement length if foreign==1" "regress headroom displacement length if foreign==1" ) familyp(displacement) bootstraps(100) seed(20) strata(foreign) detail replace
-cf _all using "templates/examp_subgroups_strata.dta"
+cf _all using "compare/examp_subgroups_strata.dta"
 
 * reg/areg/reghdfe example
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("areg OUTCOMEVAR displacement length, absorb(foreign)") familyp(displacement) bootstraps(50) seed(20) replace
-cf _all using "templates/examp_areg.dta"
+cf _all using "compare/examp_areg.dta"
 
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("reg OUTCOMEVAR displacement length i.foreign") familyp(displacement) bootstraps(50) seed(20) replace
-cf outcome regressor pwyoung using "templates/examp_areg.dta"
+cf outcome regressor pwyoung using "compare/examp_areg.dta"
 
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("reghdfe OUTCOMEVAR displacement length, absorb(foreign)") familyp(displacement) bootstraps(50) seed(20) replace
-cf outcome regressor pwyoung using "templates/examp_areg.dta"
+cf outcome regressor pwyoung using "compare/examp_areg.dta"
 
 
 * Invalid seeds should generate a syntax error
@@ -117,7 +117,7 @@ assert _rc==198
 * clustering example
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length, cluster(turn)") familyp(displacement) bootstraps(100) seed(20) replace cluster(turn)
-cf outcome regressor pwyoung using "templates/examp_cluster.dta"
+cf outcome regressor pwyoung using "compare/examp_cluster.dta"
 
 ***
 * Missing data examples
@@ -174,7 +174,7 @@ qui forval s = 1/`NSIM' {
 }
 keep k model outcome regressor p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "templates/example_normal.dta", assert(match) nogenerate
+merge 1:1 k model outcome regressor using "compare/example_normal.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
@@ -199,7 +199,7 @@ qui forval s = 1/`NSIM' {
 }
 keep k model outcome regressor p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "templates/example_nonnormal.dta", assert(match) nogenerate
+merge 1:1 k model outcome regressor using "compare/example_nonnormal.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
@@ -238,7 +238,7 @@ qui forval s = 1/`NSIM' {
 }
 keep k model outcome regressor p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "templates/example_correlated.dta", assert(match) nogenerate
+merge 1:1 k model outcome regressor using "compare/example_correlated.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
@@ -263,7 +263,7 @@ qui forval s = 1/`NSIM' {
 }
 keep k model outcome regressor p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "templates/example_subgroup.dta", assert(match) nogenerate
+merge 1:1 k model outcome regressor using "compare/example_subgroup.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
