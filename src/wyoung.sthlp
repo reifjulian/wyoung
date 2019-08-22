@@ -99,6 +99,10 @@ The Bonferroni-Holm adjusted {it:p}-values are calculated as {it:{p(1)*J, max[p(
 The Sidak-Holm adjusted {it:p}-values are calculated as {it:{1-(1-p(1))^J, max[p(1),1-(1-p(2))^(J-1)],..., max[p(J-1),p(J)]}}.
 If the calculation yields a value larger than 1, then the adjusted {it:p}-value is set equal to 1.
 
+{p 4 4 2}Following estimation of a model, {cmd:wyoung} obtains unadjusted {it:p}-values from {cmd:r(table)}.
+If {cmd:r(table)} is unavailable, then {cmd:wyoung} calculates a two-tailed p-value using the t-statistic and the residual degrees of freedom (as retrieved from {cmd:e(df_r)}). 
+If the residual degrees of freedom are unavailable, the unadjusted {it:p}-value is calculated by assuming normality.
+
 
 {title:Remarks}
 

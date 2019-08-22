@@ -1,4 +1,5 @@
-*! wyoung 1.0.3 19jun2018 by Julian Reif
+*! wyoung 1.0.4 22aug2019 by Julian Reif
+* 1.0.4: add support for commands that don't store p-values in r(table) (eg ivreg2)
 * 1.0.3: better error handling for missing observations
 * 1.0.2: cluster bootstrap now required when clustered standard errors are present; force option added
 * 1.0.1: cluster bootstrap option added
@@ -26,6 +27,10 @@ program define wyoung, rclass
 	
 	tempfile bs
 	tempname mat
+	
+	******
+	* Error check syntax options
+	******	
 
 	* N = number of bootstraps
 	local N = `bootstraps'
@@ -54,7 +59,7 @@ program define wyoung, rclass
 	if !mi("`cluster'") {
 		tempname id_cluster
 		local bs_cluster "cluster(`cluster') idcluster(`id_cluster')"
-	}	
+	}
 
 	******
 	* Syntax 1: user specifies varlist that will replace "OUTCOMEVAR"
@@ -141,25 +146,40 @@ program define wyoung, rclass
 	
 		tempname p_`k' ystar_`k'
 
-		* Obtain initial values for coefficient ("beta"), stderr, and p-value
+		* Obtain initial values for coefficient ("beta") and stderr
 		cap `cmdline_`k''
 		if _rc {
 			noi di as error _n "The following error occurred when running the command " as result `"`cmdline_`k''"' as error ":"
 			error _rc
 		}
 		
-		local beta_`k' = _b[`familyp']
+		cap local beta_`k' = _b[`familyp']
+		if _rc {
+			noi di as error _n "Coefficient estimate for " as result "`familyp'" as error " not available after running the command " as result `"`cmdline_`k''"'
+			error _rc			
+		}
 		local stderr_`k' = _se[`familyp']
 		local N_`k' = e(N)
 		if !mi("`e(depvar)'") local outcomevar_`k' "`e(depvar)'"
 		
-		matrix `mat' = r(table)
-		scalar `p_`k'' = `mat'[rownumb(`mat',"pvalue"),colnumb(`mat',"`familyp'")]
+		* P-value is pulled from r(table) if possible. Otherwise it is calculated manually
+		cap matrix `mat' = r(table)
+		scalar `p_`k'' = `mat'[rownumb(`mat',"pvalue"),colnumb(`mat',"`familyp'")]		
 		matrix drop `mat'
-				
+		
 		if `p_`k''==. {
-			noi di as error _n "p-value not obtainable from matrix r(table) when running the command " as result `"`cmdline_`k''"'
-			exit 504
+
+			local tstat = abs(`beta_`k'' / `stderr_`k'')
+			
+			cap local df = `e(df_r)'
+			cap confirm numeric `df'
+			if !_rc scalar `p_`k'' = tprob(`df', abs(`tstat'))
+			else    scalar `p_`k'' = 2*(1-normprob(abs(`tstat')))
+
+			if `p_`k''==. {
+				noi di as error _n "p-value not available and could not be calculated when running the command " as result `"`cmdline_`k''"'
+				exit 504
+			}
 		}
 
 		if "`e(vce)'"=="cluster" local vce_cluster 1

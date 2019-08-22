@@ -1,9 +1,10 @@
-clear 
+* This script runs a series of tests on the -wyoung- package to help prevent inadvertent bugs.
+clear
+adopath ++"../src"
 version 15
 set more off
 set tracedepth 1
 program drop _all
-
 
 *********************************************
 * Example 1
@@ -144,6 +145,19 @@ cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") fami
 assert _rc==2001
 
 
+*****
+* ivreg 2 example (requires ivreg2 to be installed)
+*****
+
+sysuse auto, clear
+wyoung trunk foreign rep78, cmd("ivreg2 OUTCOMEVAR (length=price)") familyp(length) bootstraps(100) seed(20) replace
+cf _all using "compare/iv1.dta"
+
+* Generate error if user incorrectly asks for familyp value for the instrument
+program drop _all
+sysuse auto, clear
+cap wyoung trunk foreign rep78, cmd("ivreg2 OUTCOMEVAR (length=price)") familyp(price) bootstraps(100) seed(20) replace
+assert _rc == 111
 
 ******************************************************************************************************************************************
 * Simulations (NSIM=1):
