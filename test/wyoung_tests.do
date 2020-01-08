@@ -1,4 +1,5 @@
-* This script runs a series of tests on the -wyoung- package to help prevent inadvertent bugs.
+cscript wyoung adofile wyoung
+
 clear
 adopath ++"../src"
 version 15
@@ -158,6 +159,28 @@ program drop _all
 sysuse auto, clear
 cap wyoung trunk foreign rep78, cmd("ivreg2 OUTCOMEVAR (length=price)") familyp(price) bootstraps(100) seed(20) replace
 assert _rc == 111
+
+*******************************
+* Support for factor variables
+*******************************
+
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("1.foreign") bootstraps(5) seed(20) replace
+cf _all using "compare/examp_fv.dta"
+
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i1.foreign") bootstraps(5) seed(20) replace
+
+* Generate error if user inputs factor variable that is not estimated
+sysuse auto, clear
+cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i0.foreign") bootstraps(5) seed(20) replace
+assert _rc==504
+
+* Generate error if user inputs nonsense factor variables
+sysuse auto, clear
+cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i.weight#i.weight") bootstraps(5) seed(20) replace
+assert _rc==198
+
 
 ******************************************************************************************************************************************
 * Simulations (NSIM=1):

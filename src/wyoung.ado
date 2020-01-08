@@ -1,4 +1,5 @@
-*! wyoung 1.0.4 22aug2019 by Julian Reif
+*! wyoung 1.0.5 07jan2020 by Julian Reif
+* 1.0.5: familyp option now supports factor variables and time-series operators
 * 1.0.4: add support for commands that don't store p-values in r(table) (eg ivreg2)
 * 1.0.3: better error handling for missing observations
 * 1.0.2: cluster bootstrap now required when clustered standard errors are present; force option added
@@ -9,7 +10,7 @@ program define wyoung, rclass
 	version 12
 
 	* Syntax 1: one model with multiple outcomes 
-	syntax [varlist(default=none)], cmd(string) familyp(varname) BOOTstraps(int) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) force detail SINGLEstep replace]
+	syntax [varlist(default=none)], cmd(string) familyp(varname fv ts) BOOTstraps(int) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) force detail SINGLEstep replace]
 	
 	local outcome_vars "`varlist'"
 	
@@ -136,7 +137,7 @@ program define wyoung, rclass
 	di as text "Estimating the family-wise {it:p}-values for " as result "`familyp'" as text " in the following set of regressions:"
 	forval k = 1/`K' {
 		di in yellow `"`cmdline_`k''"'
-		if !strpos("`cmdline_`k''","`familyp'") {
+		if !strpos("`cmdline_`k''","`familyp'") & !strpos("`familyp'",".") & !strpos("`familyp'","#") {
 			di as error "variable {bf:`familyp'} not listed as regressor in regression model above"
 			exit 111
 		}
