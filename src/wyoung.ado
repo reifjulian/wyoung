@@ -307,7 +307,7 @@ program define wyoung, rclass
 	qui cap replace pwyoung  = max(pwyoung[_n-1]  ,pwyoung)   if _n>1
 	qui cap replace pwyoung1 = max(pwyoung1[_n-1] ,pwyoung1)  if _n>1
 
-	* Calculate Holm-Bonferroni and Holm-Sedak step-down corrections
+	* Calculate Holm-Bonferroni and Holm-Sidak step-down corrections
 	tempname j
 	qui gen `j' = _N-_n+1
 	
