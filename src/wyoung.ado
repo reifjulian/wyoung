@@ -1,4 +1,5 @@
-*! wyoung 1.0.5 07jan2020 by Julian Reif
+*! wyoung 1.0.6 13jul2020 by Julian Reif
+* 1.0.6: added familypalt option. TO DO: qui gen regressor = "`familyp'" --> familypvar
 * 1.0.5: familyp option now supports factor variables and time-series operators
 * 1.0.4: add support for commands that don't store p-values in r(table) (eg ivreg2)
 * 1.0.3: better error handling for missing observations
@@ -10,7 +11,7 @@ program define wyoung, rclass
 	version 12
 
 	* Syntax 1: one model with multiple outcomes 
-	syntax [varlist(default=none)], cmd(string) familyp(varname fv ts) BOOTstraps(int) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) force detail SINGLEstep replace]
+	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) [familyp(varname fv ts) familypalt(string) weights(varlist) test(string) noRESAMPling seed(string) strata(varlist) cluster(varlist) force detail SINGLEstep replace]
 	
 	local outcome_vars "`varlist'"
 	
@@ -27,7 +28,7 @@ program define wyoung, rclass
 	local user_cmd "wyoung `0'"
 	
 	tempfile bs
-	tempname mat
+	tempname mat nlcom_b nlcom_V
 	
 	******
 	* Error check syntax options
@@ -61,6 +62,17 @@ program define wyoung, rclass
 		tempname id_cluster
 		local bs_cluster "cluster(`cluster') idcluster(`id_cluster')"
 	}
+	
+	* Familyp option
+	if mi("`familyp'`familypalt'") {
+		di as error "option {cmd:familyp()} required"
+		exit 198
+	}
+	
+	if !mi("`familyp'") & !mi("`familypalt'"){
+		di as error "cannot specify both the familyp() and familypalt() options"
+		exit 198
+	}	
 
 	******
 	* Syntax 1: user specifies varlist that will replace "OUTCOMEVAR"
@@ -147,43 +159,76 @@ program define wyoung, rclass
 	
 		tempname p_`k' ystar_`k'
 
-		* Obtain initial values for coefficient ("beta") and stderr
+		* Run regression k
 		cap `cmdline_`k''
 		if _rc {
 			noi di as error _n "The following error occurred when running the command " as result `"`cmdline_`k''"' as error ":"
 			error _rc
 		}
-		
-		cap local beta_`k' = _b[`familyp']
-		if _rc {
-			noi di as error _n "Coefficient estimate for " as result "`familyp'" as error " not available after running the command " as result `"`cmdline_`k''"'
-			error _rc			
-		}
-		local stderr_`k' = _se[`familyp']
 		local N_`k' = e(N)
+		if "`e(vce)'"=="cluster" local vce_cluster 1
 		if !mi("`e(depvar)'") local outcomevar_`k' "`e(depvar)'"
 		
-		* P-value is pulled from r(table) if possible. Otherwise it is calculated manually
-		cap matrix `mat' = r(table)
-		scalar `p_`k'' = `mat'[rownumb(`mat',"pvalue"),colnumb(`mat',"`familyp'")]		
-		matrix drop `mat'
 		
-		if `p_`k''==. {
-
-			local tstat = abs(`beta_`k'' / `stderr_`k'')
+		* Option 1: user specified familyp() -- calculate _b, _se, and the associated unadjusted p-val
+		if !mi("`familyp'") {
+			cap local beta_`k' = _b[`familyp']
+			if _rc {
+				noi di as error _n "Coefficient estimate for " as result "`familyp'" as error " not available after running the command " as result `"`cmdline_`k''"'
+				error _rc			
+			}
+			local stderr_`k' = _se[`familyp']
 			
-			cap local df = `e(df_r)'
-			cap confirm numeric `df'
-			if !_rc scalar `p_`k'' = tprob(`df', abs(`tstat'))
-			else    scalar `p_`k'' = 2*(1-normprob(abs(`tstat')))
-
+			* P-value is pulled from r(table) if possible. Otherwise it is calculated manually
+			cap matrix `mat' = r(table)
+			scalar `p_`k'' = `mat'[rownumb(`mat',"pvalue"),colnumb(`mat',"`familyp'")]		
+			matrix drop `mat'
+			
 			if `p_`k''==. {
-				noi di as error _n "p-value not available and could not be calculated when running the command " as result `"`cmdline_`k''"'
-				exit 504
+
+				local tstat = abs(`beta_`k'' / `stderr_`k'')
+				
+				cap local df = `e(df_r)'
+				cap confirm numeric `df'
+				if !_rc scalar `p_`k'' = tprob(`df', abs(`tstat'))
+				else    scalar `p_`k'' = 2*(1-normprob(abs(`tstat')))
+
+				if `p_`k''==. {
+					noi di as error _n "p-value not available and could not be calculated when running the command " as result `"`cmdline_`k''"'
+					exit 504
+				}
 			}
 		}
-
-		if "`e(vce)'"=="cluster" local vce_cluster 1
+		
+		* Option 2: user specified familypalt() -- calculate _b, _se, and pval using lincom or nlcom
+		else {
+		    cap lincom `familypalt'
+			if !_rc {
+			    local beta_`k' = r(estimate)
+				local stderr_`k' = r(se)
+				scalar `p_`k'' = r(p)
+			}
+			
+			else {
+			    cap nlcom `familypalt'
+				if !_rc {
+				    
+				    matrix `nlcom_b' = r(b)
+					matrix `nlcom_V' = r(V)
+					
+					local beta_`k' = `nlcom_b'[1,1]
+					local stderr_`k' = sqrt(`nlcom_V'[1,1])
+					scalar `p_`k'' = 2*normal(-abs(`beta_`k''/`stderr_`k''))					
+					matrix drop `nlcom_b' `nlcom_V'
+				}
+				
+				else {
+				    noi di as error _n `"`familypalt' is not valid input for {cmd:lincom} or {cmd:nlcom}"'
+					exit 198
+				}
+			}
+		}
+		
 	}
 
 	* Issue error if user is estimating a model with clustered standard errors AND did not specify a bootstrap cluster (unless force option specified)
@@ -218,16 +263,31 @@ program define wyoung, rclass
 				if _rc {
 					noi di as error _n "The following error occurred when running the command " as result `"`cmdline_`k''"' as error ":"
 					error _rc
-				}				
-				cap test _b[`familyp']=`beta_`k''
-				if _rc {
-					noi di as error _n "The following error occurred when testing the significance of a coefficient after running the command " as result `"`cmdline_`k''"' as error ":"
-					error _rc
+				}
+				local Ni_`k' = e(N)
+				
+				* Option 1: user specified familyp() -- use test to calculate pstar
+				if !mi("`familyp'") {
+					cap test _b[`familyp']=`beta_`k''
+					if _rc {
+						noi di as error _n "The following error occurred when testing the significance of a coefficient after running the command " as result `"`cmdline_`k''"' as error ":"
+						error _rc
+					}
+					local pstar_`k' = r(p)
 				}
 				
-				local pstar_`k' = r(p)	
-				
-				local Ni_`k' = e(N)
+				* Option 2: user specified familypalt() -- use test or testnl to calcluate pstar
+				else {
+				    cap test `familypalt' == `beta_`k''
+					if _rc {
+					    cap testnl `familypalt' == `beta_`k''
+						if _rc {
+							noi di as error _n "Error occurred when testing " as result "`familypalt'" as error "the significance of a coefficient after running the command " as result `"`cmdline_`k''"'
+							exit 198
+						}
+					}
+					local pstar_`k' = r(p)
+				}
 			}
 			
 			* Store results from each model k

@@ -38,6 +38,14 @@ foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
 
+* familypalt option
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familypalt(_b[displacement]) bootstraps(100) seed(20) replace
+cf k-outcome coef-psidak using "compare/examp1.dta"
+
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familypalt(_b[displacement]*_b[length]) bootstraps(100) seed(20) replace
+
+
 *********************************************
 * Example 2 (alternative syntax)
 *********************************************

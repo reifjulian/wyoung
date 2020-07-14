@@ -34,12 +34,13 @@ cap mkdir "`tbldir'"
 
 local NSIM  = 2000
 local NBOOT = 1000
+
 local NOBS  = 100
 
 ***********************************
 * Run simulations for each scenario
 ***********************************
-qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" {
+qui foreach scen in /*"normal" "subgroup" "lognormal" "correlated" "cluster"*/ "lincom" {
 
 	set seed 20
 
@@ -151,7 +152,20 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" {
 				gen vce       = "iid"
 				gen bootstrap = "standard"
 				append using "`t'"				
-		}			
+		}
+		
+		***
+		* Lincom
+		***
+		if "`scen'"=="lincom" {
+			gen x1 = rnormal(0,1)
+			gen x2 = rnormal(0,1)
+			qui forval y = 1/10 {		
+				gen e_`y' = rnormal(0,1)
+				gen y_`y' = 2*x1 + 0.5*x2 + e_`y'
+			}
+			wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x1 x2") familypalt(_b[x1] - 4*_b[x2]) singlestep replace
+		}
 
 		***
 		* Save results for each simulation
@@ -174,7 +188,7 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" {
 ***********************************
 * Calculate family-wise error rates for Table 1
 ***********************************
-
+stop
 use "`outdir'/simulation_normal.dta", clear
 gen scenario = "normal"
 
