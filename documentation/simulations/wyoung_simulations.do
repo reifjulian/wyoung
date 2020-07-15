@@ -164,7 +164,18 @@ qui foreach scen in /*"normal" "subgroup" "lognormal" "correlated" "cluster"*/ "
 				gen e_`y' = rnormal(0,1)
 				gen y_`y' = 2*x1 + 0.5*x2 + e_`y'
 			}
-			wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x1 x2") familypalt(_b[x1] - 4*_b[x2]) singlestep replace
+			
+			* Estimate two sets of hypotheses: (1) linear: _b[x1] - 4*_b[x2] = 2 - 4*0.5 = 0 (2) nonlinear: _b[x1]*_b[x2]-1 = 2*0.5 -1 = 
+			local current_seed "`c(seed)'"
+			preserve
+				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x1 x2") familypalt(_b[x1] - 4*_b[x2]) singlestep replace
+				gen lincom = "linear"
+				save "`t'", replace
+			restore
+				set seed `current_seed'
+				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x1 x2") familypalt( _b[x1]*_b[x2] - 1) singlestep replace
+				gen lincom = "nonlinear"
+				append using "`t'"
 		}
 
 		***
@@ -185,10 +196,38 @@ qui foreach scen in /*"normal" "subgroup" "lognormal" "correlated" "cluster"*/ "
 	save "`outdir'/simulation_`scen'.dta", replace
 }
 
+
+
+
+
+
+
+
+
+use "`outdir'/simulation_lincom.dta"
+gen scenario = lincom
+
+* Flag hypotheses that are rejected at alpha = 0.05
+foreach v in p pwyoung psidak pbonf {
+	assert inrange(`v',0,1)
+	gen `v'_05 = `v'<.05
+}
+
+* Family-wise error rate: probability of rejecting 1 (or more) hypotheses out of this family of 10 hypotheses
+collapse (max) *_*, by(sim scenario) fast
+
+* Calculate what proportion of the time this happens
+collapse (mean) *_*, by(scenario) fast
+list
+
+
+
+stop
 ***********************************
 * Calculate family-wise error rates for Table 1
 ***********************************
-stop
+
+
 use "`outdir'/simulation_normal.dta", clear
 gen scenario = "normal"
 
@@ -215,7 +254,7 @@ collapse (mean) *_*, by(scenario) fast
 list
 
 ***
-* Format and output Table 1
+* Format and output LaTeX
 ***
 gen dummy=1
 preserve
