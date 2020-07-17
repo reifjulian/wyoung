@@ -7,10 +7,10 @@
 
 ## Updates:
 
-* **1.0.5 
+* **1.0.5**
   - `familyp()` option now supports factor variables and time-series operators
 
-* **1.0.4
+* **1.0.4**
   - Added support for commands that don't store p-values in `r(table)` (eg `ivreg2`)
 
 * **1.0.3**
