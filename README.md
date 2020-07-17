@@ -7,8 +7,20 @@
 
 ## Updates:
 
-* **June 19, 2018**
+* **1.0.5 
+  - `familyp()` option now supports factor variables and time-series operators
+
+* **1.0.4
+  - Added support for commands that don't store p-values in `r(table)` (eg `ivreg2`)
+
+* **1.0.3**
   - Better error handling for missing observations
+  
+* **1.0.2**
+  - Cluster bootstrap now required when clustered standard errors are present; force option added
+
+* **1.0.1**
+  - Cluster bootstrap option added
 
 ## Install:
 
