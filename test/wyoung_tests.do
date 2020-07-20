@@ -2,6 +2,7 @@ cscript wyoung adofile wyoung
 
 clear
 adopath ++"../src"
+adopath ++"../src/auxiliary"
 version 15
 set more off
 set tracedepth 1
