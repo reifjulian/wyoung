@@ -48,5 +48,5 @@ For more details, see the Stata help file included in this package. Additional d
 
 `wyoung` is not an official Stata command. It is a free contribution to the research community. You may cite it as:
 
-Jones, D., D. Molitor, and J. Reif. 2018. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." *National Bureau of Economic Research Working Paper No. 24229*.
+Jones, D., D. Molitor, and J. Reif. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." *The Quarterly Journal of Economics*, November 2019, 134(4): 1747-1791.
 
