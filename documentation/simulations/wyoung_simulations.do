@@ -3,7 +3,7 @@
 * This script provides companion code for the -wyoung- Stata command. See www.nber.org/workplacewellness/s/wyoung.pdf for additional details.
 
 * Citation:
-* Jones, D., D. Molitor, and J. Reif. 2018. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." National Bureau of Economic Research Working Paper No. 24229.
+* Jones, D., D. Molitor, and J. Reif. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." The Quarterly Journal of Economics, November 2019, 134(4): 1747-1791.
 
 
 *********************************************************************************************************************
@@ -40,7 +40,8 @@ local NOBS  = 100
 ***********************************
 * Run simulations for each scenario
 ***********************************
-qui foreach scen in /*"normal" "subgroup" "lognormal" "correlated" "cluster"*/ "lincom" {
+
+qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "multiple" {
 
 	set seed 20
 
@@ -155,9 +156,9 @@ qui foreach scen in /*"normal" "subgroup" "lognormal" "correlated" "cluster"*/ "
 		}
 		
 		***
-		* Lincom
+		* Multiple restrictions
 		***
-		if "`scen'"=="lincom" {
+		if "`scen'"=="multiple" {
 			gen x1 = rnormal(0,1)
 			gen x2 = rnormal(0,1)
 			qui forval y = 1/10 {		
@@ -165,16 +166,16 @@ qui foreach scen in /*"normal" "subgroup" "lognormal" "correlated" "cluster"*/ "
 				gen y_`y' = 2*x1 + 0.5*x2 + e_`y'
 			}
 			
-			* Estimate two sets of hypotheses: (1) linear: _b[x1] - 4*_b[x2] = 2 - 4*0.5 = 0 (2) nonlinear: _b[x1]*_b[x2]-1 = 2*0.5 -1 = 
+			* Estimate two sets of hypotheses: (1) linear: _b[x1] - 4*_b[x2] = 2 - 4*0.5 = 0 (2) nonlinear: _b[x1]*_b[x2]-1 = 2*0.5 - 1 = 0
 			local current_seed "`c(seed)'"
 			preserve
 				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x1 x2") familypalt(_b[x1] - 4*_b[x2]) singlestep replace
-				gen lincom = "linear"
+				gen scenario = "linear"
 				save "`t'", replace
 			restore
 				set seed `current_seed'
 				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x1 x2") familypalt( _b[x1]*_b[x2] - 1) singlestep replace
-				gen lincom = "nonlinear"
+				gen scenario = "nonlinear"
 				append using "`t'"
 		}
 
@@ -197,32 +198,6 @@ qui foreach scen in /*"normal" "subgroup" "lognormal" "correlated" "cluster"*/ "
 }
 
 
-
-
-
-
-
-
-
-use "`outdir'/simulation_lincom.dta"
-gen scenario = lincom
-
-* Flag hypotheses that are rejected at alpha = 0.05
-foreach v in p pwyoung psidak pbonf {
-	assert inrange(`v',0,1)
-	gen `v'_05 = `v'<.05
-}
-
-* Family-wise error rate: probability of rejecting 1 (or more) hypotheses out of this family of 10 hypotheses
-collapse (max) *_*, by(sim scenario) fast
-
-* Calculate what proportion of the time this happens
-collapse (mean) *_*, by(scenario) fast
-list
-
-
-
-stop
 ***********************************
 * Calculate family-wise error rates for Table 1
 ***********************************
@@ -302,7 +277,7 @@ label var lognormal "Lognormal errors"
 label var simulation_correlated "Correlated errors"
 
 local fn "Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. All hypotheses are true for the simulations reported in columns (1), (2), and (4), i.e., lower rejection rates are better. All hypotheses are false for the simulation reported in column (3), i.e., higher rejection rates are better. The Westfall-Young correction is performed using 1,000 bootstraps."
-texsave using "`tbldir'/wyoung1.tex", hlines(-3) autonumber nofix marker("tab:wyoung1") title("Family-wise rejection proportions at \(\alpha = 0.05\)") footnote("`fn'") headerlines("\midrule") varlabels replace
+texsave using "`tbldir'/wyoung1.tex", hlines(-3) autonumber nofix marker("tab:wyoung1") title("Family-wise rejection proportions at \(\alpha = 0.05\)") footnote("`fn'") varlabels replace
 
 
 ***********************************
@@ -378,5 +353,69 @@ label var v_cluster_b_cluster ""
 local fn "Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. The difference between columns (1) and (2) is the assumption about the standard errors (homoskedastic or clustered). The difference between columns (2) and (3) is the method of bootstrapping (resampling over individual observations versus clusters), which matters only for the Westfall-Young correction. All null hypotheses are true, i.e., lower rejection rates are better. Each simulation generated 100 panels (clusters) with 10 time periods. The Westfall-Young correction is performed using 1,000 bootstraps."
 texsave using "`tbldir'/wyoung2.tex", hlines(-4) autonumber nofix marker("tab:wyoung2") title("Family-wise rejection proportions at \(\alpha = 0.05\), when the data generating process is serially correlated") footnote("`fn'") nonames replace
 
+
+***********************************
+* Calculate family-wise error rates for Table 3 (multiple linear and nonlinear restrictions)
+***********************************
+
+use "`outdir'/simulation_multiple.dta", clear
+
+* Flag hypotheses that are rejected at alpha = 0.05
+foreach v in p pwyoung psidak pbonf {
+	assert inrange(`v',0,1)
+	gen `v'_05 = `v'<.05
+}
+
+* Family-wise error rate: probability of rejecting 1 (or more) hypotheses out of this family of 10 hypotheses
+collapse (max) *_*, by(sim scenario) fast
+
+* Calculate what proportion of the time this happens
+collapse (mean) *_*, by(scenario) fast
+list
+
+***
+* Format and output LaTeX
+***
+gen dummy=1
+preserve
+	foreach v in pwyoung_05 psidak_05 pbonf_05 p_05 {
+		keep `v' dummy scenario
+		reshape wide `v', i(dummy) j(scenario) str
+		rename `v'* *
+		gen var = "`v'"
+		if "`v'"!="pwyoung_05" append using "`t'"
+		save "`t'", replace
+		restore, preserve
+	}
+restore, not
+
+use "`t'", clear
+drop dummy
+order var linear nonlinear
+
+replace var = "Unadjusted"      if var=="p_05"
+replace var = "Bonferroni"      if var=="pbonf1_05"
+replace var = "Bonferroni-Holm" if var=="pbonf_05"
+replace var = "Sidak-Holm"      if var=="psidak_05"
+replace var = "Westfall-Young"  if var=="pwyoung_05"
+
+set obs `=_N+2'
+replace var = "Num. observations"   if _n==_N-1
+replace var = "Num. hypotheses"     if _n==_N
+
+foreach v of varlist linear nonlinear {
+	replace `v' = 10  if var=="Num. hypotheses"
+	replace `v' = 100 if var=="Num. observations"
+	
+	tostring `v', replace force format(%12.3fc)
+	replace `v' = subinstr(`v',".000","",1)
+}
+
+label var var "Adjustment method"
+label var linear "Linear restriction"
+label var nonlinear "Nonlinear restriction"
+
+local fn "Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. All null hypotheses are true, i.e., lower rejection rates are better. The Westfall-Young correction is performed using 1,000 bootstraps."
+texsave using "`tbldir'/wyoung3.tex", hlines(-2) autonumber nofix marker("tab:wyoung3") title("Family-wise rejection proportions at \(\alpha = 0.05\), when testing hypotheses with multiple restrictions") footnote("`fn'") varlabels replace
 
 ** EOF
