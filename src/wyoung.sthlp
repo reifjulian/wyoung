@@ -10,13 +10,20 @@ help {hi:wyoung}
 
 {p 4 8 2}Syntax 1: multiple hypothesis testing {hline 2} one model with multiple outcomes
 
-{p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help varname:varname}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} [{cmd:seed(}{it:#}{cmd:)} 
+{p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help exp:exp}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
+[{cmd:seed(}{it:#}{cmd:)} 
 {cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:replace}]
 
 {p 4 8 2}Syntax 2: multiple hypothesis testing {hline 2} different models with multiple outcomes and multiple subgroups
 
-{p 8 14 2}{cmd:wyoung}, {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} {cmd:familyp(}{help varname:varname}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} [{cmd:seed(}{it:#}{cmd:)} 
+{p 8 14 2}{cmd:wyoung}, {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} {cmd:familyp(}{help exp:exp}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
+[{cmd:seed(}{it:#}{cmd:)} 
 {cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:replace}]
+
+{p 4 8 2}where
+
+{p 8 14 2}{help exp:exp} is any linear combination of coefficients that is valid syntax for {help lincom:lincom} or {help nlcom:nlcom}.  
+{help exp:exp} must not contain an equal sign.
 
 {title:Options}
 
@@ -36,8 +43,9 @@ See example 1 below.
 {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} specifies a list of models with different outcomes and/or different subgroups. See example 2 below.
 
 {p 4 8 2}
-{cmd:familyp(}{help varname:varname}{cmd:)} specifies the independent variable being tested. The {it:p}-value corresponding to this variable will be adjusted to control the family-wise error rate. 
-{help varname:varname} must be included in every {it:model}.
+{cmd:familyp(}{help exp:exp}{cmd:)} specifies a coefficient or a combination of coefficients.
+{help exp:exp} follows the syntax of {help lincom:lincom} and {help nlcom:nlcom}.
+For example, specifying {cmd:familyp(}{it:varname}{cmd:)} is equivalent to specifying {cmd:familyp(}{it:_b[varname]}{cmd:)}.
 
 {p 4 8 2}
 {cmd:bootstraps(}{it:#}{cmd:)} performs # bootstrap replications for resampling. Westfall and Young (1993) recommend using at least 10,000 bootstraps.

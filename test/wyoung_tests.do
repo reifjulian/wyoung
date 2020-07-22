@@ -1,12 +1,11 @@
 cscript wyoung adofile wyoung
+set linesize 250
 
 clear
 adopath ++"../src"
-adopath ++"../src/auxiliary"
 version 15
 set more off
 set tracedepth 1
-program drop _all
 
 *********************************************
 * Example 1
@@ -39,13 +38,14 @@ foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
 
-* familypalt option
+* Alternative syntax
 sysuse auto, clear
-wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familypalt(_b[displacement]) bootstraps(100) seed(20) replace
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]) bootstraps(100) seed(20) replace
 cf k-outcome coef-psidak using "compare/examp1.dta"
 
-wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familypalt(_b[displacement]*_b[length]) bootstraps(100) seed(20) replace
-
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]-0) bootstraps(100) seed(20) replace
+cf k-outcome coef-psidak using "compare/examp1.dta"
 
 *********************************************
 * Example 2 (alternative syntax)
@@ -120,7 +120,7 @@ sysuse auto, clear
 cap wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(weight) bootstraps(100) seed(20) replace
 assert _rc==111
 
-* familyp var must be listed in all regressions
+*nbootstraps must be greater than 0
 sysuse auto, clear
 cap wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(weight) bootstraps(0) seed(20) replace
 assert _rc==198
@@ -154,9 +154,13 @@ replace mpg=. in 1/6
 cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace
 assert _rc==2001
 
+* 4) Insufficient variation
+sysuse auto, clear
+replace mpg = 100
+cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace
 
 *****
-* ivreg 2 example (requires ivreg2 to be installed)
+* ivreg2 example (requires ivreg2 to be installed)
 *****
 
 sysuse auto, clear
@@ -164,7 +168,6 @@ wyoung trunk foreign rep78, cmd("ivreg2 OUTCOMEVAR (length=price)") familyp(leng
 cf _all using "compare/iv1.dta"
 
 * Generate error if user incorrectly asks for familyp value for the instrument
-program drop _all
 sysuse auto, clear
 cap wyoung trunk foreign rep78, cmd("ivreg2 OUTCOMEVAR (length=price)") familyp(price) bootstraps(100) seed(20) replace
 assert _rc == 111
