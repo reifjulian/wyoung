@@ -8,6 +8,23 @@ set more off
 set tracedepth 1
 
 *********************************************
+* Multiple restrictions
+*********************************************
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(length+50*displacement) bootstraps(100) seed(20) replace
+cf _all using "compare/multiple1.dta"
+
+sysuse auto, clear
+cap wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]=1) bootstraps(100) seed(20) replace
+assert _rc==198
+replace length = length*100
+replace headroom = headroom*1000
+wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]-1) bootstraps(100) seed(20) replace
+cf _all using "compare/multiple2.dta"
+
+*sysuse auto, clear
+*wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(weight turn) bootstraps(100) seed(20) replace
+*********************************************
 * Example 1
 *********************************************
 sysuse auto, clear

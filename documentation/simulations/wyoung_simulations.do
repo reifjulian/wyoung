@@ -43,7 +43,7 @@ local NOBS  = 100
 * Run simulations for each scenario
 ***********************************
 
-qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "multiple" {
+qui foreach scen in /*"normal" "subgroup" "lognormal" "correlated" "cluster"*/ "multiple" {
 
 	set seed 20
 
@@ -171,12 +171,12 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "mult
 			* Estimate two sets of hypotheses: (1) linear: _b[x1] - 4*_b[x2] = 2 - 4*0.5 = 0 (2) nonlinear: _b[x1]*_b[x2]-1 = 2*0.5 - 1 = 0
 			local current_seed "`c(seed)'"
 			preserve
-				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x1 x2") familypalt(_b[x1] - 4*_b[x2]) singlestep replace
+				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x1 x2") familyp(_b[x1] - 4*_b[x2]) singlestep replace
 				gen scenario = "linear"
 				save "`t'", replace
 			restore
 				set seed `current_seed'
-				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x1 x2") familypalt( _b[x1]*_b[x2] - 1) singlestep replace
+				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x1 x2") familyp( _b[x1]*_b[x2] - 1) singlestep replace
 				gen scenario = "nonlinear"
 				append using "`t'"
 		}
