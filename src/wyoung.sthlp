@@ -146,6 +146,12 @@ the user should specify the list of models as
 
 {col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement) bootstraps(100) seed(20)}}
 
+{p 4 4 2}4. Test the linear restriction {it:_b[length] + 50*_b[displacement] = 0}.
+
+{col 8}{cmd:. {stata sysuse auto.dta, clear}}
+
+{col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) bootstraps(100) seed(20)}}
+
 
 {title:Stored results}
 

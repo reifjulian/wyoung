@@ -22,8 +22,6 @@ replace headroom = headroom*1000
 wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]-1) bootstraps(100) seed(20) replace
 cf _all using "compare/multiple2.dta"
 
-*sysuse auto, clear
-*wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(weight turn) bootstraps(100) seed(20) replace
 *********************************************
 * Example 1
 *********************************************
