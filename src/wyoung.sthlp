@@ -40,7 +40,7 @@ See example 1 below.
 {p 8 8 2} Syntax 2: different models with multiple outcomes and multiple subgroups
 
 {p 12 12 2}
-{cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} specifies a list of models with different outcomes and/or different subgroups. See example 2 below.
+{cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} specifies a list of models. See example 2 below.
 
 {p 4 8 2}
 {cmd:familyp(}{help exp:exp}{cmd:)} specifies a coefficient or a combination of coefficients.
@@ -123,7 +123,7 @@ the user should specify the list of models as
 
 {p 4 4 2}{cmd:wyoung} is not an official Stata command. It is a free contribution to the research community. You may cite it as:
 
-{p 8 8 2}Jones, D., D. Molitor, and J. Reif. 2018. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." {it:National Bureau of Economic Research Working Paper No. 24229}.
+{p 8 8 2}Jones, D., D. Molitor, and J. Reif. 2019. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." {it:The Quarterly Journal of Economics}, November 2019, 134(4): 1747-1791.
 
 
 {title:Examples}
