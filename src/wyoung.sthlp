@@ -171,7 +171,7 @@ In addition, {cmd: wyoung} stores the following in {cmd: r()}:
 
 {title:References}
 
-{p 4 4 2}Jones, D., D. Molitor, and J. Reif. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." {it:The Quarterly Journal of Economics}, November 2019, 134(4): 1747-1791. 
+{p 4 4 2}Jones, D., D. Molitor, and J. Reif. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." {it:Quarterly Journal of Economics}, November 2019, 134(4): 1747-1791. 
 Available from: {browse "https://www.nber.org/workplacewellness/s/IL_Wellness_Study_1.pdf":www.nber.org/workplacewellness/s/IL_Wellness_Study_1.pdf}.
 
 {p 4 4 2}Westfall, P., and S. Young. 1993. {it:Resampling-based Multiple Testing: Examples and Methods for p-value Adjustment.} John Wiley & Sons, Inc.

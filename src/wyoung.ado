@@ -1,5 +1,5 @@
-*! wyoung 1.1 23jul2020 by Julian Reif
-* 1.1: TO DO: change "regressor" saved variable name to "familyp" familyp option now supports the testing of linear and nonlinear combinations of parameters
+*! wyoung 1.1 24jul2020 by Julian Reif
+* 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
 * 1.0.5: familyp option now supports factor variables and time-series operators
 * 1.0.4: add support for commands that don't store p-values in r(table) (eg ivreg2)
 * 1.0.3: better error handling for missing observations
@@ -371,8 +371,8 @@ program define wyoung, rclass
 	
 	sort k
 	drop `j'
-	qui gen regressor = "`familyp'"
-	order k model outcome regressor coef stderr p `Ns'
+	qui gen familyp = "`familyp'"
+	order k model outcome familyp coef stderr p `Ns'
 	list
 	
 	mkmat coef stderr p*, matrix(`mat')

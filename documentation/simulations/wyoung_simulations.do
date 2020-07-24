@@ -43,7 +43,7 @@ local NOBS  = 100
 * Run simulations for each scenario
 ***********************************
 
-qui foreach scen in /*"normal" "subgroup" "lognormal" "correlated" "cluster"*/ "multiple" {
+qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "multiple" {
 
 	set seed 20
 
@@ -184,7 +184,7 @@ qui foreach scen in /*"normal" "subgroup" "lognormal" "correlated" "cluster"*/ "
 		***
 		* Save results for each simulation
 		***
-		drop model outcome regressor
+		drop model outcome familyp
 		gen sim = `s'
 		compress
 		if `s'>1 append using "`results'"

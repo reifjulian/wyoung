@@ -1,5 +1,6 @@
+local linesize = c(linesize)
 cscript wyoung adofile wyoung
-set linesize 250
+set linesize `linesize'
 
 clear
 adopath ++"../src"
@@ -48,7 +49,7 @@ cf _all using "compare/examp1.dta"
 sysuse auto, clear
 wyoung, cmd(`" `""regress mpg displacement length, cluster(foreign)""' `""regress headroom displacement length, cluster(foreign)""' `""regress turn displacement length, cluster(foreign)""' "') cluster(foreign) familyp(displacement) bootstraps(10) seed(20) replace
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "compare/examp1_cluster.dta", assert(match) nogenerate
+merge 1:1 k model outcome familyp using "compare/examp1_cluster.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
@@ -106,11 +107,11 @@ cf _all using "compare/examp_areg.dta"
 
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("reg OUTCOMEVAR displacement length i.foreign") familyp(displacement) bootstraps(50) seed(20) replace
-cf outcome regressor pwyoung using "compare/examp_areg.dta"
+cf outcome familyp pwyoung using "compare/examp_areg.dta"
 
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("reghdfe OUTCOMEVAR displacement length, absorb(foreign)") familyp(displacement) bootstraps(50) seed(20) replace
-cf outcome regressor pwyoung using "compare/examp_areg.dta"
+cf outcome familyp pwyoung using "compare/examp_areg.dta"
 
 
 * Invalid seeds should generate a syntax error
@@ -143,7 +144,7 @@ assert _rc==198
 * clustering example
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length, cluster(turn)") familyp(displacement) bootstraps(100) seed(20) replace cluster(turn)
-cf outcome regressor pwyoung using "compare/examp_cluster.dta"
+cf outcome familyp pwyoung using "compare/examp_cluster.dta"
 
 ***
 * Missing data examples
@@ -236,9 +237,9 @@ qui forval s = 1/`NSIM' {
 	wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x") familyp(x) singlestep replace
 	compress	
 }
-keep k model outcome regressor p*
+keep k model outcome familyp p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "compare/example_normal.dta", assert(match) nogenerate
+merge 1:1 k model outcome familyp using "compare/example_normal.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
@@ -261,9 +262,9 @@ qui forval s = 1/`NSIM' {
 	wyoung y*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR dummy, nocons") singlestep familyp(dummy) replace
 	compress
 }
-keep k model outcome regressor p*
+keep k model outcome familyp p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "compare/example_nonnormal.dta", assert(match) nogenerate
+merge 1:1 k model outcome familyp using "compare/example_nonnormal.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
@@ -300,9 +301,9 @@ qui forval s = 1/`NSIM' {
 	compress
 
 }
-keep k model outcome regressor p*
+keep k model outcome familyp p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "compare/example_correlated.dta", assert(match) nogenerate
+merge 1:1 k model outcome familyp using "compare/example_correlated.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
@@ -325,11 +326,12 @@ qui forval s = 1/`NSIM' {
 	
 	compress
 }
-keep k model outcome regressor p*
+keep k model outcome familyp p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "compare/example_subgroup.dta", assert(match) nogenerate
+merge 1:1 k model outcome familyp using "compare/example_subgroup.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
+
 
 ** EOF
