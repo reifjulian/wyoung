@@ -1,4 +1,5 @@
-*! wyoung 1.0.5 07jan2020 by Julian Reif
+*! wyoung 1.1 24jul2020 by Julian Reif
+* 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
 * 1.0.5: familyp option now supports factor variables and time-series operators
 * 1.0.4: add support for commands that don't store p-values in r(table) (eg ivreg2)
 * 1.0.3: better error handling for missing observations
@@ -10,7 +11,7 @@ program define wyoung, rclass
 	version 12
 
 	* Syntax 1: one model with multiple outcomes 
-	syntax [varlist(default=none)], cmd(string) familyp(varname fv ts) BOOTstraps(int) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) force detail SINGLEstep replace]
+	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) test(string) noRESAMPling seed(string) strata(varlist) cluster(varlist) force detail SINGLEstep replace]
 	
 	local outcome_vars "`varlist'"
 	
@@ -27,7 +28,7 @@ program define wyoung, rclass
 	local user_cmd "wyoung `0'"
 	
 	tempfile bs
-	tempname mat
+	tempname mat nlcom_b nlcom_V
 	
 	******
 	* Error check syntax options
@@ -134,39 +135,58 @@ program define wyoung, rclass
 	******
 	* Step 1: Estimate the initial, unadjusted models
 	******
-	di as text "Estimating the family-wise {it:p}-values for " as result "`familyp'" as text " in the following set of regressions:"
-	forval k = 1/`K' {
-		di in yellow `"`cmdline_`k''"'
-		if !strpos("`cmdline_`k''","`familyp'") & !strpos("`familyp'",".") & !strpos("`familyp'","#") {
-			di as error "variable {bf:`familyp'} not listed as regressor in regression model above"
-			exit 111
-		}
-	}
+	di as text "Estimating family-wise {it:p}-values for " as result "`familyp'" as text " for the following regressions:"
 
 	qui forval k = 1/`K' {
+
+		noi di in yellow `"`cmdline_`k''"'	
 	
 		tempname p_`k' ystar_`k'
 
-		* Obtain initial values for coefficient ("beta") and stderr
+		* Run regression k
 		cap `cmdline_`k''
 		if _rc {
-			noi di as error _n "The following error occurred when running the command " as result `"`cmdline_`k''"' as error ":"
+			noi di as error "The following error occurred when running the command " as result `"`cmdline_`k''"' as error ":"
 			error _rc
 		}
-		
-		cap local beta_`k' = _b[`familyp']
-		if _rc {
-			noi di as error _n "Coefficient estimate for " as result "`familyp'" as error " not available after running the command " as result `"`cmdline_`k''"'
-			error _rc			
-		}
-		local stderr_`k' = _se[`familyp']
 		local N_`k' = e(N)
+		if "`e(vce)'"=="cluster" local vce_cluster 1
 		if !mi("`e(depvar)'") local outcomevar_`k' "`e(depvar)'"
 		
-		* P-value is pulled from r(table) if possible. Otherwise it is calculated manually
-		cap matrix `mat' = r(table)
-		scalar `p_`k'' = `mat'[rownumb(`mat',"pvalue"),colnumb(`mat',"`familyp'")]		
-		matrix drop `mat'
+		* Calculate _b, _se, and the associated unadjusted p-val using lincom (or nlcom if _rc==131, which indicates nonlinearity)
+		cap lincom `familyp'
+		if !_rc {
+			local beta_`k' = r(estimate)
+			local stderr_`k' = r(se)
+			scalar `p_`k'' = r(p)
+		}
+		else if _rc==131 {
+			cap nlcom `familyp'
+			if !_rc {
+				
+				matrix `nlcom_b' = r(b)
+				matrix `nlcom_V' = r(V)
+				
+				local beta_`k' = `nlcom_b'[1,1]
+				local stderr_`k' = sqrt(`nlcom_V'[1,1])
+				scalar `p_`k'' = 2*normal(-abs(`beta_`k''/`stderr_`k''))					
+				matrix drop `nlcom_b' `nlcom_V'
+			}
+			else {
+				noi di as error _n `"`familyp' is invalid syntax for {cmd:lincom} and {cmd:nlcom}"'
+				error _rc
+			}
+		}
+		else {
+			noi di as error "The following error occurred when running the command " as result `"lincom `familyp'"' as error ":"
+			lincom `familyp'
+		}
+		
+		* Ensure that beta and pval are recovered
+		if `beta_`k''==. {
+			noi di as error "coefficient estimate for " as result "`familyp'" as error " not available after running the command " as result `"`cmdline_`k''"'
+			exit 504			
+		}		
 		
 		if `p_`k''==. {
 
@@ -178,12 +198,11 @@ program define wyoung, rclass
 			else    scalar `p_`k'' = 2*(1-normprob(abs(`tstat')))
 
 			if `p_`k''==. {
-				noi di as error _n "p-value not available and could not be calculated when running the command " as result `"`cmdline_`k''"'
+				noi di as error "p-value not available and could not be calculated when running the command " as result `"`cmdline_`k''"'
 				exit 504
 			}
-		}
-
-		if "`e(vce)'"=="cluster" local vce_cluster 1
+		}		
+		
 	}
 
 	* Issue error if user is estimating a model with clustered standard errors AND did not specify a bootstrap cluster (unless force option specified)
@@ -211,23 +230,29 @@ program define wyoung, rclass
 				ren `id_cluster' `cluster'
 			}
 
-			* Calculate pstar for each model
+			* Calculate pstar for each model, using test or testnl
 			qui forval k = 1/`K' {
 
 				cap `cmdline_`k''
 				if _rc {
-					noi di as error _n "The following error occurred when running the command " as result `"`cmdline_`k''"' as error ":"
-					error _rc
-				}				
-				cap test _b[`familyp']=`beta_`k''
-				if _rc {
-					noi di as error _n "The following error occurred when testing the significance of a coefficient after running the command " as result `"`cmdline_`k''"' as error ":"
+					noi di as error _n "The following error occurred when running the command " as result `"`cmdline_`k''"' as error " on a bootstrap sample:"
 					error _rc
 				}
-				
-				local pstar_`k' = r(p)	
-				
 				local Ni_`k' = e(N)
+				
+				cap test `familyp' == `beta_`k''
+				if _rc==131 {
+					cap testnl `familyp' == `beta_`k''
+					if _rc {
+						noi di as error _n `"`familyp' is invalid syntax for {cmd:test} and {cmd:testnl}"'
+						error _rc
+					}
+				}
+				else if _rc {
+					noi di as error _n "The following error occurred when running the command " as result `"test `familyp' == `beta_`k''"' as error " on a bootstrap sample:"					
+					test `familyp' == `beta_`k''
+				}
+				local pstar_`k' = r(p)
 			}
 			
 			* Store results from each model k
@@ -346,8 +371,8 @@ program define wyoung, rclass
 	
 	sort k
 	drop `j'
-	qui gen regressor = "`familyp'"
-	order k model outcome regressor coef stderr p `Ns'
+	qui gen familyp = "`familyp'"
+	order k model outcome familyp coef stderr p `Ns'
 	list
 	
 	mkmat coef stderr p*, matrix(`mat')

@@ -1,11 +1,27 @@
+local linesize = c(linesize)
 cscript wyoung adofile wyoung
+set linesize `linesize'
 
 clear
 adopath ++"../src"
 version 15
 set more off
 set tracedepth 1
-program drop _all
+
+*********************************************
+* Multiple restrictions
+*********************************************
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(length+50*displacement) bootstraps(100) seed(20) replace
+cf _all using "compare/multiple1.dta"
+
+sysuse auto, clear
+cap wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]=1) bootstraps(100) seed(20) replace
+assert _rc==198
+replace length = length*100
+replace headroom = headroom*1000
+wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]-1) bootstraps(100) seed(20) replace
+cf _all using "compare/multiple2.dta"
 
 *********************************************
 * Example 1
@@ -33,10 +49,19 @@ cf _all using "compare/examp1.dta"
 sysuse auto, clear
 wyoung, cmd(`" `""regress mpg displacement length, cluster(foreign)""' `""regress headroom displacement length, cluster(foreign)""' `""regress turn displacement length, cluster(foreign)""' "') cluster(foreign) familyp(displacement) bootstraps(10) seed(20) replace
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "compare/examp1_cluster.dta", assert(match) nogenerate
+merge 1:1 k model outcome familyp using "compare/examp1_cluster.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
+
+* Alternative syntax
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]) bootstraps(100) seed(20) replace
+cf k-outcome coef-psidak using "compare/examp1.dta"
+
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]-0) bootstraps(100) seed(20) replace
+cf k-outcome coef-psidak using "compare/examp1.dta"
 
 *********************************************
 * Example 2 (alternative syntax)
@@ -82,11 +107,11 @@ cf _all using "compare/examp_areg.dta"
 
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("reg OUTCOMEVAR displacement length i.foreign") familyp(displacement) bootstraps(50) seed(20) replace
-cf outcome regressor pwyoung using "compare/examp_areg.dta"
+cf outcome familyp pwyoung using "compare/examp_areg.dta"
 
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("reghdfe OUTCOMEVAR displacement length, absorb(foreign)") familyp(displacement) bootstraps(50) seed(20) replace
-cf outcome regressor pwyoung using "compare/examp_areg.dta"
+cf outcome familyp pwyoung using "compare/examp_areg.dta"
 
 
 * Invalid seeds should generate a syntax error
@@ -111,7 +136,7 @@ sysuse auto, clear
 cap wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(weight) bootstraps(100) seed(20) replace
 assert _rc==111
 
-* familyp var must be listed in all regressions
+*nbootstraps must be greater than 0
 sysuse auto, clear
 cap wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(weight) bootstraps(0) seed(20) replace
 assert _rc==198
@@ -119,7 +144,7 @@ assert _rc==198
 * clustering example
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length, cluster(turn)") familyp(displacement) bootstraps(100) seed(20) replace cluster(turn)
-cf outcome regressor pwyoung using "compare/examp_cluster.dta"
+cf outcome familyp pwyoung using "compare/examp_cluster.dta"
 
 ***
 * Missing data examples
@@ -145,9 +170,13 @@ replace mpg=. in 1/6
 cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace
 assert _rc==2001
 
+* 4) Insufficient variation
+sysuse auto, clear
+replace mpg = 100
+cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace
 
 *****
-* ivreg 2 example (requires ivreg2 to be installed)
+* ivreg2 example (requires ivreg2 to be installed)
 *****
 
 sysuse auto, clear
@@ -155,7 +184,6 @@ wyoung trunk foreign rep78, cmd("ivreg2 OUTCOMEVAR (length=price)") familyp(leng
 cf _all using "compare/iv1.dta"
 
 * Generate error if user incorrectly asks for familyp value for the instrument
-program drop _all
 sysuse auto, clear
 cap wyoung trunk foreign rep78, cmd("ivreg2 OUTCOMEVAR (length=price)") familyp(price) bootstraps(100) seed(20) replace
 assert _rc == 111
@@ -209,9 +237,9 @@ qui forval s = 1/`NSIM' {
 	wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x") familyp(x) singlestep replace
 	compress	
 }
-keep k model outcome regressor p*
+keep k model outcome familyp p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "compare/example_normal.dta", assert(match) nogenerate
+merge 1:1 k model outcome familyp using "compare/example_normal.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
@@ -234,9 +262,9 @@ qui forval s = 1/`NSIM' {
 	wyoung y*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR dummy, nocons") singlestep familyp(dummy) replace
 	compress
 }
-keep k model outcome regressor p*
+keep k model outcome familyp p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "compare/example_nonnormal.dta", assert(match) nogenerate
+merge 1:1 k model outcome familyp using "compare/example_nonnormal.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
@@ -273,9 +301,9 @@ qui forval s = 1/`NSIM' {
 	compress
 
 }
-keep k model outcome regressor p*
+keep k model outcome familyp p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "compare/example_correlated.dta", assert(match) nogenerate
+merge 1:1 k model outcome familyp using "compare/example_correlated.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
@@ -298,11 +326,12 @@ qui forval s = 1/`NSIM' {
 	
 	compress
 }
-keep k model outcome regressor p*
+keep k model outcome familyp p*
 rename (p*) (new_p*)
-merge 1:1 k model outcome regressor using "compare/example_subgroup.dta", assert(match) nogenerate
+merge 1:1 k model outcome familyp using "compare/example_subgroup.dta", assert(match) nogenerate
 foreach v of varlist p* {
 	assert abs(`v' - new_`v')<0.0000001
 }
+
 
 ** EOF

@@ -10,13 +10,20 @@ help {hi:wyoung}
 
 {p 4 8 2}Syntax 1: multiple hypothesis testing {hline 2} one model with multiple outcomes
 
-{p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help varname:varname}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} [{cmd:seed(}{it:#}{cmd:)} 
+{p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help exp:exp}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
+[{cmd:seed(}{it:#}{cmd:)} 
 {cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:replace}]
 
 {p 4 8 2}Syntax 2: multiple hypothesis testing {hline 2} different models with multiple outcomes and multiple subgroups
 
-{p 8 14 2}{cmd:wyoung}, {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} {cmd:familyp(}{help varname:varname}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} [{cmd:seed(}{it:#}{cmd:)} 
+{p 8 14 2}{cmd:wyoung}, {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} {cmd:familyp(}{help exp:exp}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
+[{cmd:seed(}{it:#}{cmd:)} 
 {cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:replace}]
+
+{p 4 8 2}where
+
+{p 8 14 2}{help exp:exp} is any linear combination of coefficients that is valid syntax for {help lincom:lincom} or {help nlcom:nlcom}.  
+{help exp:exp} must not contain an equal sign.
 
 {title:Options}
 
@@ -33,11 +40,12 @@ See example 1 below.
 {p 8 8 2} Syntax 2: different models with multiple outcomes and multiple subgroups
 
 {p 12 12 2}
-{cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} specifies a list of models with different outcomes and/or different subgroups. See example 2 below.
+{cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} specifies a list of models. See example 2 below.
 
 {p 4 8 2}
-{cmd:familyp(}{help varname:varname}{cmd:)} specifies the independent variable being tested. The {it:p}-value corresponding to this variable will be adjusted to control the family-wise error rate. 
-{help varname:varname} must be included in every {it:model}.
+{cmd:familyp(}{help exp:exp}{cmd:)} specifies a coefficient or a combination of coefficients.
+{help exp:exp} follows the syntax of {help lincom:lincom} and {help nlcom:nlcom}.
+For example, specifying {cmd:familyp(}{it:varname}{cmd:)} is equivalent to specifying {cmd:familyp(}{it:_b[varname]}{cmd:)}.
 
 {p 4 8 2}
 {cmd:bootstraps(}{it:#}{cmd:)} performs # bootstrap replications for resampling. Westfall and Young (1993) recommend using at least 10,000 bootstraps.
@@ -115,7 +123,7 @@ the user should specify the list of models as
 
 {p 4 4 2}{cmd:wyoung} is not an official Stata command. It is a free contribution to the research community. You may cite it as:
 
-{p 8 8 2}Jones, D., D. Molitor, and J. Reif. 2018. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." {it:National Bureau of Economic Research Working Paper No. 24229}.
+{p 8 8 2}Jones, D., D. Molitor, and J. Reif. 2019. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." {it:The Quarterly Journal of Economics}, November 2019, 134(4): 1747-1791.
 
 
 {title:Examples}
@@ -138,6 +146,12 @@ the user should specify the list of models as
 
 {col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement) bootstraps(100) seed(20)}}
 
+{p 4 4 2}4. Test the linear restriction {it:_b[length] + 50*_b[displacement] = 0}.
+
+{col 8}{cmd:. {stata sysuse auto.dta, clear}}
+
+{col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) bootstraps(100) seed(20)}}
+
 
 {title:Stored results}
 
@@ -157,7 +171,7 @@ In addition, {cmd: wyoung} stores the following in {cmd: r()}:
 
 {title:References}
 
-{p 4 4 2}Jones, D., D. Molitor, and J. Reif. 2018. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." {it:National Bureau of Economic Research Working Paper No. 24229}. 
+{p 4 4 2}Jones, D., D. Molitor, and J. Reif. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." {it:Quarterly Journal of Economics}, November 2019, 134(4): 1747-1791. 
 Available from: {browse "https://www.nber.org/workplacewellness/s/IL_Wellness_Study_1.pdf":www.nber.org/workplacewellness/s/IL_Wellness_Study_1.pdf}.
 
 {p 4 4 2}Westfall, P., and S. Young. 1993. {it:Resampling-based Multiple Testing: Examples and Methods for p-value Adjustment.} John Wiley & Sons, Inc.
