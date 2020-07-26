@@ -6,6 +6,8 @@
 -----------
 
 ## Updates:
+* **1.1**
+  - `familyp()` familyp option now supports the testing of linear and nonlinear combinations of parameters
 
 * **1.0.5**
   - `familyp()` option now supports factor variables and time-series operators
