@@ -13,7 +13,7 @@ For more details, see the Stata help file included in this package. Additional d
 
 ## Installation:
 
-Type `which wyoung` at the Stata prompt to determine which version you have installed. To install the most recent version of `wyoung`, copy/paste the following line of code:
+Type `which wyoung` at the Stata prompt to determine your `wyoung` version. To install the most recent version, copy and paste the following line of code:
 
 ```
 net install wyoung, from("https://raw.githubusercontent.com/reifjulian/wyoung/master") replace
