@@ -1,7 +1,7 @@
 # WYOUNG: control the family-wise error rate when performing multiple hypothesis tests
 
 - Current version: `1.1 24jul2020`
-- Jump to: [`overview`](#overview) [`installation`](#Installation) [`update history`](#updates) [`citation`](#citation) 
+- Jump to: [`overview`](#overview) [`installation`](#Installation) [`update history`](#update) [`citation`](#citation) 
 
 -----------
 
@@ -27,7 +27,7 @@ ssc install wyoung, replace
 These two versions are typically synced, but occasionally the SSC version may be slightly out of date.
 
 
-## Updates:
+## Update history:
 * **1.1**
   - `familyp()` option now supports the testing of linear and nonlinear combinations of parameters
 
