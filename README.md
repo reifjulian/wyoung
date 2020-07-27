@@ -1,6 +1,6 @@
 # WYOUNG: control the family-wise error rate when performing multiple hypothesis tests
 
-- Current version: `1.0.5 07jan2020`
+- Current version: `1.1 24jul2020`
 - Jump to: [`overview`](#overview) [`installation`](#Installation) [`update history`](#updates) [`citation`](#citation) 
 
 -----------
