@@ -32,6 +32,7 @@ These two versions are typically synced, but occasionally the SSC version may be
 sysuse auto.dta, clear
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100) seed(20)
 ```
+The output variable `pwyoung` reports that the adjusted *p*-values for these three outcome variables are 0.33, 0.33, and 0.14, respectively. 
 ![Example 1](images/example1.PNG)
 ## Update History:
 * **1.1**
