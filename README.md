@@ -26,6 +26,12 @@ ssc install wyoung, replace
 
 These two versions are typically synced, but occasionally the SSC version may be slightly out of date.
 
+## Examples
+1. Test whether the outcome variables `mpg`, `headroom`, or `turn` are significantly associated with `displacement` (conditional on `length`) after controlling for multiple inference.
+```stata
+sysuse auto.dta, clear
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100) seed(20)
+```
 
 ## Update History:
 * **1.1**
