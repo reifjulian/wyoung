@@ -27,7 +27,7 @@ ssc install wyoung, replace
 These two versions are typically synced, but occasionally the SSC version may be slightly out of date.
 
 
-## Update history:
+## Update History:
 * **1.1**
   - `familyp()` option now supports the testing of linear and nonlinear combinations of parameters
 
