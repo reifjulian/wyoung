@@ -32,7 +32,7 @@ These two versions are typically synced, but occasionally the SSC version may be
 sysuse auto.dta, clear
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100) seed(20)
 ```
-The output reports both unadjusted and adjusted *p*-values for the null hypothesis that the coefficient on the variable `displacement` is equal to 0. For example, in the regression `regress turn displacment length`, the unadjusted *p*-value is 0.09 and the Westfall-Young adjusted $p$-value is 0.14.
+For each regression, the output reports unadjusted and adjusted *p*-values for the null hypothesis that the coefficient on the variable `displacement` is equal to 0. For example, in the regression `regress turn displacment length`, the unadjusted *p*-value is 0.09 and the Westfall-Young adjusted $p$-value is 0.14.
 ![Example 1](images/example1.PNG)
 ## Update History:
 * **1.1**
