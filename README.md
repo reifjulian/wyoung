@@ -32,7 +32,7 @@ These two versions are typically synced, but occasionally the SSC version may be
 sysuse auto.dta, clear
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100) seed(20)
 ```
-
+![Example 1](images/example1.PNG)
 ## Update History:
 * **1.1**
   - `familyp()` option now supports the testing of linear and nonlinear combinations of parameters
