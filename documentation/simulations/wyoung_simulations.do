@@ -3,7 +3,7 @@
 * This script provides companion code for the -wyoung- Stata command. See www.nber.org/workplacewellness/s/wyoung.pdf for additional details.
 
 * Citation:
-* Jones, D., D. Molitor, and J. Reif. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." The Quarterly Journal of Economics, November 2019, 134(4): 1747-1791.
+* Jones, D., D. Molitor, and J. Reif. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." Quarterly Journal of Economics, November 2019, 134(4): 1747-1791.
 
 
 *********************************************************************************************************************
@@ -43,7 +43,7 @@ local NOBS  = 100
 * Run simulations for each scenario
 ***********************************
 
-qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "multiple" {
+qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "combination" "multiplefamilyp" {
 
 	set seed 20
 
@@ -160,7 +160,7 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "mult
 		***
 		* Multiple restrictions
 		***
-		if "`scen'"=="multiple" {
+		if "`scen'"=="combination" {
 			gen x1 = rnormal(0,1)
 			gen x2 = rnormal(0,1)
 			qui forval y = 1/10 {		
@@ -180,6 +180,19 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "mult
 				gen scenario = "nonlinear"
 				append using "`t'"
 		}
+		
+		***
+		* Multiple family p's specified
+		***
+		if "`scen'"=="multiplefamilyp" {
+			gen byte treat1 = round(runiform(0,1))
+			gen byte treat2 = round(runiform(0,1))
+			qui forval y = 1/10 {		
+				gen e_`y' = rnormal(0,1)
+				gen y_`y' = e_`y'
+			}
+			wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR treat1 treat2") familyp(treat1 treat2) singlestep replace
+		}		
 
 		***
 		* Save results for each simulation
@@ -357,10 +370,10 @@ texsave using "`tbldir'/wyoung2.tex", hlines(-4) autonumber nofix marker("tab:wy
 
 
 ***********************************
-* Calculate family-wise error rates for Table 3 (multiple linear and nonlinear restrictions)
+* Calculate family-wise error rates for Table 3 (combination of restrictions)
 ***********************************
 
-use "`outdir'/simulation_multiple.dta", clear
+use "`outdir'/simulation_combinatione.dta", clear
 
 * Flag hypotheses that are rejected at alpha = 0.05
 foreach v in p pwyoung psidak pbonf {

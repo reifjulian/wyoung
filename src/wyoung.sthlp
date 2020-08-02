@@ -22,7 +22,7 @@ help {hi:wyoung}
 
 {p 4 8 2}where
 
-{p 8 14 2}{help exp:exp} is any linear combination of coefficients that is valid syntax for {help lincom:lincom} or {help nlcom:nlcom}.  
+{p 8 14 2}{help exp:exp} is any combination of coefficients that is valid syntax for {help lincom:lincom} or {help nlcom:nlcom}.  
 {help exp:exp} must not contain an equal sign.
 
 {title:Options}

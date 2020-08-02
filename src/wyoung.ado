@@ -1,4 +1,5 @@
-*! wyoung 1.1 24jul2020 by Julian Reif
+*! wyoung 1.2 2aug2020 by Julian Reif
+* 1.2: familyp option now supports multiple variables, New options: familypexp, cmdp(string, TBD)
 * 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
 * 1.0.5: familyp option now supports factor variables and time-series operators
 * 1.0.4: add support for commands that don't store p-values in r(table) (eg ivreg2)
@@ -11,7 +12,7 @@ program define wyoung, rclass
 	version 12
 
 	* Syntax 1: one model with multiple outcomes 
-	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) test(string) noRESAMPling seed(string) strata(varlist) cluster(varlist) force detail SINGLEstep replace]
+	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) test(string) noRESAMPling seed(string) strata(varlist) cluster(varlist) force detail SINGLEstep familypexp cmdp(string) replace]
 	
 	local outcome_vars "`varlist'"
 	
@@ -62,14 +63,36 @@ program define wyoung, rclass
 		tempname id_cluster
 		local bs_cluster "cluster(`cluster') idcluster(`id_cluster')"
 	}
+	
+	local num_familypvars = 1
+	
+	* cmdp() option
+	if "`cmdp'"!="" {
+		if "`familyp'"!="" {
+			di as error "cannot specify both the familyp() and cmdp() options"
+			exit 198
+		}
+		
+		if "`familypexp'"!="" {
+			di as error "cannot specify both the familypexp and cmdp() options"
+			exit 198
+		}			
+	}
 
+	
+	* If user specified familypexp, then the input is an expression, not a varlist
+	if "`familypexp'"=="" {
+		fvunab familyp : `familyp'
+		local num_familypvars : word count `familyp'
+	}
+
+	
 	******
 	* Syntax 1: user specifies varlist that will replace "OUTCOMEVAR"
 	******
 	if "`outcome_vars'"!="" {
 
-		* K = number of outcomes in this family
-		local K : word count `outcome_vars'
+		local num_outcomes : word count `outcome_vars'
 
 		* Ensure that "OUTCOMEVAR" is present in the command
 		if !strpos("`cmd'"," OUTCOMEVAR ") {
@@ -82,27 +105,42 @@ program define wyoung, rclass
 		if "`weights'"!="" {
 			
 			local num_weightvars : word count `weights'
-			if "`num_weightvars'"!="`K'" {
-				di as error "number of weight vars = `num_weightvars' != `K' = number of regressions"
+			if "`num_weightvars'"!="`num_outcomes'" {
+				di as error "number of weight vars = `num_weightvars' != `num_outcomes' = number of outcomes"
 				exit 198
 			}
 			
-			forval k = 1/`num_weightvars' {
+			forval w = 1/`num_weightvars' {
 				tokenize `weights'
-				local weightvar_`k' ``k''
+				local weightvar_`w' ``w''
 			}
 		}
 
-		* Define the K regressions
-		forval k = 1/`K' {
-
-			tokenize `outcome_vars'
-			local y ``k''
-			local outcomevar_`k' "`y'"
+		* K = number of hypotheses = num_outcomes X num_familypvars
+		local K = `num_familypvars' * `num_outcomes'
+		
+		local k = 1
+		forval f = 1/`num_familypvars' {
 			
-			* Baseline regression
-			local tmp_`k':     subinstr local cmd     "OUTCOMEVAR" "`y'", word
-			local cmdline_`k': subinstr local tmp_`k' "WEIGHTVAR"  "`weightvar_`k''"			
+			if `num_familypvars'==1 local familyp_touse "`familyp'"
+			else {
+				tokenize `familyp'
+				local familyp_touse "``f''"
+			}
+			
+			forval i = 1/`num_outcomes' {
+
+				tokenize `outcome_vars'
+				local y ``i''
+				local outcomevar_`k' "`y'"
+				local familyp_`k' "`familyp_touse'"
+				
+				* Baseline regression
+				local tmp_`k':     subinstr local cmd     "OUTCOMEVAR" "`y'", word
+				local cmdline_`k': subinstr local tmp_`i' "WEIGHTVAR"  "`weightvar_`i''"
+
+				local k = `k'+1
+			}
 		}
 	}
 	
@@ -128,18 +166,24 @@ program define wyoung, rclass
 			macro shift
 		}
 		
-		* K = number of outcomes in this family
+		* K = number of hypotheses = num_outcomes X num_familypvars
 		local K = `k'
+		local num_outcomes = `K'/`num_familypvars'
+		
+		forval k = 1/`K' {
+			local familyp_`k' `familyp'
+		}		
 	}
 	
 	******
 	* Step 1: Estimate the initial, unadjusted models
 	******
-	di as text "Estimating family-wise {it:p}-values for " as result "`familyp'" as text " for the following regressions:"
+	di as text "Estimating adjusted {it:p}-values for " as result `K' as text " hypothesis tests"
 
 	qui forval k = 1/`K' {
 
-		noi di in yellow `"`cmdline_`k''"'	
+		if mod(`k',`num_outcomes')==1 noi di as text _n "familyp: " as result `"`familyp_`k''"'
+		noi di in yellow _skip(4) `"`cmdline_`k''"'
 	
 		tempname p_`k' ystar_`k'
 
@@ -154,14 +198,14 @@ program define wyoung, rclass
 		if !mi("`e(depvar)'") local outcomevar_`k' "`e(depvar)'"
 		
 		* Calculate _b, _se, and the associated unadjusted p-val using lincom (or nlcom if _rc==131, which indicates nonlinearity)
-		cap lincom `familyp'
+		cap lincom `familyp_`k''
 		if !_rc {
 			local beta_`k' = r(estimate)
 			local stderr_`k' = r(se)
 			scalar `p_`k'' = r(p)
 		}
 		else if _rc==131 {
-			cap nlcom `familyp'
+			cap nlcom `familyp_`k''
 			if !_rc {
 				
 				matrix `nlcom_b' = r(b)
@@ -173,18 +217,18 @@ program define wyoung, rclass
 				matrix drop `nlcom_b' `nlcom_V'
 			}
 			else {
-				noi di as error _n `"`familyp' is invalid syntax for {cmd:lincom} and {cmd:nlcom}"'
+				noi di as error _n `"`familyp_`k'' is invalid syntax for {cmd:lincom} and {cmd:nlcom}"'
 				error _rc
 			}
 		}
 		else {
-			noi di as error "The following error occurred when running the command " as result `"lincom `familyp'"' as error ":"
-			lincom `familyp'
+			noi di as error "The following error occurred when running the command " as result `"lincom `familyp_`k''"' as error ":"
+			lincom `familyp_`k''
 		}
 		
 		* Ensure that beta and pval are recovered
 		if `beta_`k''==. {
-			noi di as error "coefficient estimate for " as result "`familyp'" as error " not available after running the command " as result `"`cmdline_`k''"'
+			noi di as error "coefficient estimate for " as result "`familyp_`k''" as error " not available after running the command " as result `"`cmdline_`k''"'
 			exit 504			
 		}		
 		
@@ -240,17 +284,17 @@ program define wyoung, rclass
 				}
 				local Ni_`k' = e(N)
 				
-				cap test `familyp' == `beta_`k''
+				cap test `familyp_`k'' == `beta_`k''
 				if _rc==131 {
-					cap testnl `familyp' == `beta_`k''
+					cap testnl `familyp_`k'' == `beta_`k''
 					if _rc {
-						noi di as error _n `"`familyp' is invalid syntax for {cmd:test} and {cmd:testnl}"'
+						noi di as error _n `"`familyp_`k'' is invalid syntax for {cmd:test} and {cmd:testnl}"'
 						error _rc
 					}
 				}
 				else if _rc {
-					noi di as error _n "The following error occurred when running the command " as result `"test `familyp' == `beta_`k''"' as error " on a bootstrap sample:"					
-					test `familyp' == `beta_`k''
+					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `beta_`k''"' as error " on a bootstrap sample:"					
+					test `familyp_`k'' == `beta_`k''
 				}
 				local pstar_`k' = r(p)
 			}
@@ -316,6 +360,7 @@ program define wyoung, rclass
 	qui gen double coef = .
 	qui gen double stderr = .
 	qui gen double p = .
+	qui gen familyp = ""
 	if !mi("`detail'") qui gen N = .
 
 	qui forval k = 1/`K' {
@@ -324,6 +369,7 @@ program define wyoung, rclass
 		replace coef = `beta_`k''              if k==`k'
 		replace stderr = `stderr_`k''          if k==`k'
 		replace p  = `p_`k''                   if k==`k'
+		replace familyp = "`familyp_`k''"      if k==`k'
 		if !mi("`detail'") replace N = `N_`k'' if k==`k'
 	}	
 	
@@ -371,7 +417,6 @@ program define wyoung, rclass
 	
 	sort k
 	drop `j'
-	qui gen familyp = "`familyp'"
 	order k model outcome familyp coef stderr p `Ns'
 	list
 	

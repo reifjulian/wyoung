@@ -9,21 +9,6 @@ set more off
 set tracedepth 1
 
 *********************************************
-* Multiple restrictions
-*********************************************
-sysuse auto, clear
-wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(length+50*displacement) bootstraps(100) seed(20) replace
-cf _all using "compare/multiple1.dta"
-
-sysuse auto, clear
-cap wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]=1) bootstraps(100) seed(20) replace
-assert _rc==198
-replace length = length*100
-replace headroom = headroom*1000
-wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]-1) bootstraps(100) seed(20) replace
-cf _all using "compare/multiple2.dta"
-
-*********************************************
 * Example 1
 *********************************************
 sysuse auto, clear
@@ -56,11 +41,11 @@ foreach v of varlist p* {
 
 * Alternative syntax
 sysuse auto, clear
-wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]) bootstraps(100) seed(20) replace
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]) bootstraps(100) seed(20) replace familypexp
 cf k-outcome coef-psidak using "compare/examp1.dta"
 
 sysuse auto, clear
-wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]-0) bootstraps(100) seed(20) replace
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]-0) bootstraps(100) seed(20) replace familypexp
 cf k-outcome coef-psidak using "compare/examp1.dta"
 
 *********************************************
@@ -198,6 +183,7 @@ cf _all using "compare/examp_fv.dta"
 
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i1.foreign") bootstraps(5) seed(20) replace
+cf _all using "compare/examp_fv.dta"
 
 * Generate error if user inputs factor variable that is not estimated
 sysuse auto, clear
@@ -209,6 +195,24 @@ sysuse auto, clear
 cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i.weight#i.weight") bootstraps(5) seed(20) replace
 assert _rc==198
 
+cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i.weight2#i.weight") bootstraps(5) seed(20) replace
+assert _rc==111
+
+
+*********************************************
+* Multiple restrictions
+*********************************************
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(length+50*displacement) bootstraps(100) seed(20) replace familypexp
+cf _all using "compare/multiple1.dta"
+
+sysuse auto, clear
+cap wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]=1) bootstraps(100) seed(20) replace familypexp
+assert _rc==198
+replace length = length*100
+replace headroom = headroom*1000
+wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]-1) bootstraps(100) seed(20) replace familypexp
+cf _all using "compare/multiple2.dta"
 
 ******************************************************************************************************************************************
 * Simulations (NSIM=1):
