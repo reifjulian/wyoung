@@ -1,5 +1,5 @@
 *! wyoung 1.2 3aug2020 by Julian Reif
-* 1.2: familyp option now supports multiple variables, New options: familypexp, subgroup()?
+* 1.2: familyp option now supports multiple variables
 * 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
 * 1.0.5: familyp option now supports factor variables and time-series operators
 * 1.0.4: add support for commands that don't store p-values in r(table) (eg ivreg2)
