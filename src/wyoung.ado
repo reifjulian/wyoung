@@ -1,5 +1,5 @@
-*! wyoung 1.2 2aug2020 by Julian Reif
-* 1.2: familyp option now supports multiple variables, New options: familypexp, cmdp(string, TBD)
+*! wyoung 1.2 3aug2020 by Julian Reif
+* 1.2: familyp option now supports multiple variables, New options: familypexp, subgroup()?
 * 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
 * 1.0.5: familyp option now supports factor variables and time-series operators
 * 1.0.4: add support for commands that don't store p-values in r(table) (eg ivreg2)
@@ -12,7 +12,7 @@ program define wyoung, rclass
 	version 12
 
 	* Syntax 1: one model with multiple outcomes 
-	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) test(string) noRESAMPling seed(string) strata(varlist) cluster(varlist) force detail SINGLEstep familypexp cmdp(string) replace]
+	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) test(string) noRESAMPling seed(string) strata(varlist) cluster(varlist) force detail SINGLEstep familypexp replace]
 	
 	local outcome_vars "`varlist'"
 	
@@ -63,36 +63,20 @@ program define wyoung, rclass
 		tempname id_cluster
 		local bs_cluster "cluster(`cluster') idcluster(`id_cluster')"
 	}
-	
-	local num_familypvars = 1
-	
-	* cmdp() option
-	if "`cmdp'"!="" {
-		if "`familyp'"!="" {
-			di as error "cannot specify both the familyp() and cmdp() options"
-			exit 198
-		}
 		
-		if "`familypexp'"!="" {
-			di as error "cannot specify both the familypexp and cmdp() options"
-			exit 198
-		}			
-	}
-
-	
-	* If user specified familypexp, then the input is an expression, not a varlist
-	if "`familypexp'"=="" {
-		fvunab familyp : `familyp'
-		local num_familypvars : word count `familyp'
-	}
-
-	
 	******
 	* Syntax 1: user specifies varlist that will replace "OUTCOMEVAR"
 	******
 	if "`outcome_vars'"!="" {
 
 		local num_outcomes : word count `outcome_vars'
+		
+		* If user specified familypexp (rare), then the input is a single lincom/nlcom expression, not a varlist
+		local num_familypvars = 1
+		if "`familypexp'"=="" {
+			fvunab familyp : `familyp'
+			local num_familypvars : word count `familyp'
+		}
 
 		* Ensure that "OUTCOMEVAR" is present in the command
 		if !strpos("`cmd'"," OUTCOMEVAR ") {
@@ -119,6 +103,7 @@ program define wyoung, rclass
 		* K = number of hypotheses = num_outcomes X num_familypvars
 		local K = `num_familypvars' * `num_outcomes'
 		
+		* For each hypothesis k=1...K, define the outcome, familyp, and regression command
 		local k = 1
 		forval f = 1/`num_familypvars' {
 			
@@ -166,23 +151,52 @@ program define wyoung, rclass
 			macro shift
 		}
 		
-		* K = number of hypotheses = num_outcomes X num_familypvars
+		* K = number of hypotheses = number of models
 		local K = `k'
-		local num_outcomes = `K'/`num_familypvars'
 		
-		forval k = 1/`K' {
-			local familyp_`k' `familyp'
+		* Split out the familyp variable/exp that corresponds to each model
+		tokenize `"`familyp'"'
+
+		local k = 0
+		while `"`1'"' != "" {
+			local k = `k'+1
+
+			* Perform a full trim to remove leading and trailing spaces
+			mata: st_local("1",strtrim(st_local("1")))
+
+			* Strip leading and trailing quotes, if present (occurs when user specifies compound double quotes)
+			mata: if( substr(st_local("1"),1,1)==char(34) & substr(st_local("1"),-1,1)==char(34) ) st_local(  "1", substr(st_local("1"), 2, strlen(st_local("1"))-2)  );;
+
+			local familyp_`k' `"`1'"'
+			if "`familypexp'"=="" fvunab familyp_`k' : `familyp_`k''
+			
+			macro shift
 		}		
+		local num_familypvars = `k'
+		
+		* If user specifiy only a single family p command, assume it applies to all models
+		if `num_familypvars'==1 {
+			forval k = 2/`K' {
+				local familyp_`k' `familyp_1'
+			}				
+		}
+		else if `num_familypvars'!= `K' {
+			di as error "Number of familyp commands, `num_familypvars', does not match number of models, `K'"
+			exit 198
+		}
+		
+		* num_outcomes = 0 indicates syntax 2 was called
+		local num_outcomes = 0
 	}
 	
 	******
 	* Step 1: Estimate the initial, unadjusted models
 	******
-	di as text "Estimating adjusted {it:p}-values for " as result `K' as text " hypothesis tests"
+	di as text "Estimating family-wise adjusted {it:p}-values for " as result `K' as text " hypothesis tests"
 
 	qui forval k = 1/`K' {
 
-		if mod(`k',`num_outcomes')==1 noi di as text _n "familyp: " as result `"`familyp_`k''"'
+		if `num_outcomes'==0 | mod(`k',`num_outcomes')==1 noi di as text _n "familyp: " as result `"`familyp_`k''"'
 		noi di in yellow _skip(4) `"`cmdline_`k''"'
 	
 		tempname p_`k' ystar_`k'

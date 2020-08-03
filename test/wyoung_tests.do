@@ -45,6 +45,12 @@ wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(
 cf k-outcome coef-psidak using "compare/examp1.dta"
 
 sysuse auto, clear
+cap wyoung, cmd(`" `""regress mpg displacement length""' `""regress headroom displacement length""' `""regress turn displacement length""' "') familyp(_b[displacement) bootstraps(100) seed(20) replace
+assert _rc==111
+wyoung, cmd(`" `""regress mpg displacement length""' `""regress headroom displacement length""' `""regress turn displacement length""' "') familyp(_b[displacement]) bootstraps(100) seed(20) replace familypexp
+cf k-outcome coef-psidak using "compare/examp1.dta"
+
+sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]-0) bootstraps(100) seed(20) replace familypexp
 cf k-outcome coef-psidak using "compare/examp1.dta"
 
@@ -213,6 +219,22 @@ replace length = length*100
 replace headroom = headroom*1000
 wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]-1) bootstraps(100) seed(20) replace familypexp
 cf _all using "compare/multiple2.dta"
+
+*********************************************
+* Multiple treatments
+*********************************************
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement length) bootstraps(100) seed(20) replace
+cf _all using "compare/multiple3.dta"
+
+sysuse auto, clear
+wyoung, cmd("regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length" "regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length" ) familyp(displacement displacement displacement length length length) bootstraps(100) seed(20) replace
+cf _all using "compare/multiple3.dta"
+
+sysuse auto, clear
+wyoung, cmd("regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length" "regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length" ) familyp(`" "displacement" "displacement" "displacement" "length" "length" "length" "') bootstraps(100) seed(20) replace
+cf _all using "compare/multiple3.dta"
+
 
 ******************************************************************************************************************************************
 * Simulations (NSIM=1):

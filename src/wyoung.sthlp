@@ -10,42 +10,39 @@ help {hi:wyoung}
 
 {p 4 8 2}Syntax 1: multiple hypothesis testing {hline 2} one model with multiple outcomes
 
-{p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help exp:exp}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
+{p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help varlist:varlist}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
 [{cmd:seed(}{it:#}{cmd:)} 
-{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:replace}]
+{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
 
 {p 4 8 2}Syntax 2: multiple hypothesis testing {hline 2} different models with multiple outcomes and multiple subgroups
 
-{p 8 14 2}{cmd:wyoung}, {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} {cmd:familyp(}{help exp:exp}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
+{p 8 14 2}{cmd:wyoung}, {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} {cmd:familyp("}{it:varname1}{cmd:"} [{cmd:"}{it:varname2}{cmd:"} ...]{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
 [{cmd:seed(}{it:#}{cmd:)} 
-{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:replace}]
+{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
 
-{p 4 8 2}where
-
-{p 8 14 2}{help exp:exp} is any combination of coefficients that is valid syntax for {help lincom:lincom} or {help nlcom:nlcom}.  
-{help exp:exp} must not contain an equal sign.
 
 {title:Options}
 
 {p 4 8 2}
-{cmd:cmd(}{cmd:)}
+{cmd:cmd(}{cmd:)}, {cmd:familyp(}{cmd:)}
 
-{p 8 8 2} Syntax 1: one model with multiple outcomes
+{p 8 8 2} Syntax 1: one model with multiple outcomes (see example 1 below)
 
 {p 12 12 2}
 {cmd:cmd(}{it:model}{cmd:)} specifies a single model with the multiple outcomes {help varlist:varlist}. The outcome (dependent) variable is indicated in {it:model} by "OUTCOMEVAR" (upper case).
 {cmd:wyoung} will estimate multiple outcome specifications by substituting each variable from {help varlist:varlist} into "OUTCOMEVAR".
-See example 1 below.
-
-{p 8 8 2} Syntax 2: different models with multiple outcomes and multiple subgroups
 
 {p 12 12 2}
-{cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} specifies a list of models. See example 2 below.
+{cmd:familyp(}{help varlist:varlist}{cmd:)} instructs {cmd:wyoung} to calculate adjusted {it:p}-values for the null hypotheses that the coefficients of {it: varlist} are equal to 0.
 
-{p 4 8 2}
-{cmd:familyp(}{help exp:exp}{cmd:)} specifies a coefficient or a combination of coefficients.
-{help exp:exp} follows the syntax of {help lincom:lincom} and {help nlcom:nlcom}.
-For example, specifying {cmd:familyp(}{it:varname}{cmd:)} is equivalent to specifying {cmd:familyp(}{it:_b[varname]}{cmd:)}.
+{p 8 8 2} Syntax 2: different models with multiple outcomes and multiple subgroups (see example 2 below)
+
+{p 12 12 2}
+{cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} specifies a list of models. 
+
+{p 12 12 2}
+{cmd:familyp("}{it:varname1}{cmd:"} [{cmd:"}{it:varname2}{cmd:"} ...]{cmd:)} instructs {cmd:wyoung} to calculate adjusted {it:p}-values for the null hypotheses that the coefficient of {it: varname1} is equal to 0 in {it: model1}, the coefficient of {it: varname2} is equal to 0 in {it: model2}, etc.
+If only one {it:varname} is specified, {cmd:wyoung} applies it to all models.
 
 {p 4 8 2}
 {cmd:bootstraps(}{it:#}{cmd:)} performs # bootstrap replications for resampling. Westfall and Young (1993) recommend using at least 10,000 bootstraps.
@@ -75,6 +72,13 @@ step-down counterparts also control the type III error rate is unknown (Westfall
 
 {p 4 8 2}
 {cmd:noresampling} computes only the Bonferroni-Holm and Sidak-Holm adjusted {it:p}-values (very fast).
+
+{p 4 8 2}
+{cmd:familypexp} indicates that you are providing {cmd:familyp(}{help exp:exp}{cmd:)} instead of {cmd:familyp(}{help varlist:varlist}{cmd:)}, where {help exp:exp} specifies a coefficient or combination of coefficients.
+{help exp:exp} follows the syntax of {help lincom:lincom} and {help nlcom:nlcom} and must not contain an equal sign.
+If employing Syntax 2 of {cmd:wyoung}, then {cmd:familypexp} indicates that 
+you are providing {cmd:familyp("}{it:exp1}{cmd:"} [{cmd:"}{it:exp2}{cmd:"} ...]{cmd:)} instead of {cmd:familyp("}{it:varname1}{cmd:"} [{cmd:"}{it:varname2}{cmd:"} ...]{cmd:)}.
+Specifying {cmd:familypexp} provides more flexibility, but may cause {cmd:wyoung} to produce less helpful error messages when you make a syntax mistake.
 
 {p 4 8 2}
 {cmd:replace} replaces data in memory with {cmd:wyoung} results.
