@@ -14,7 +14,7 @@ help {hi:wyoung}
 [{cmd:seed(}{it:#}{cmd:)} 
 {cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
 
-{p 4 8 2}Syntax 2: multiple hypothesis testing {hline 2} different models with multiple outcomes and multiple subgroups
+{p 4 8 2}Syntax 2: multiple hypothesis testing {hline 2} different models with multiple outcomes
 
 {p 8 14 2}{cmd:wyoung}, {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} {cmd:familyp("}{it:varname1}{cmd:"} [{cmd:"}{it:varname2}{cmd:"} ...]{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
 [{cmd:seed(}{it:#}{cmd:)} 
@@ -35,7 +35,7 @@ help {hi:wyoung}
 {p 12 12 2}
 {cmd:familyp(}{help varlist:varlist}{cmd:)} instructs {cmd:wyoung} to calculate adjusted {it:p}-values for the null hypotheses that the coefficients of {it: varlist} are equal to 0.
 
-{p 8 8 2} Syntax 2: different models with multiple outcomes and multiple subgroups (see example 2 below)
+{p 8 8 2} Syntax 2: different models with multiple outcomes (see example 2 below)
 
 {p 12 12 2}
 {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} specifies a list of models. 
@@ -78,7 +78,7 @@ step-down counterparts also control the type III error rate is unknown (Westfall
 {help exp:exp} follows the syntax of {help lincom:lincom} and {help nlcom:nlcom} and must not contain an equal sign.
 If employing Syntax 2 of {cmd:wyoung}, then {cmd:familypexp} indicates that 
 you are providing {cmd:familyp("}{it:exp1}{cmd:"} [{cmd:"}{it:exp2}{cmd:"} ...]{cmd:)} instead of {cmd:familyp("}{it:varname1}{cmd:"} [{cmd:"}{it:varname2}{cmd:"} ...]{cmd:)}.
-Specifying {cmd:familypexp} provides more flexibility, but may cause {cmd:wyoung} to produce less helpful error messages when you make a syntax mistake.
+Specifying {cmd:familypexp} increases the set of possible hypothesis tests, but may cause {cmd:wyoung} to produce less helpful error messages when you make a syntax mistake.
 
 {p 4 8 2}
 {cmd:replace} replaces data in memory with {cmd:wyoung} results.
@@ -121,6 +121,10 @@ If the residual degrees of freedom are unavailable, the unadjusted {it:p}-value 
 {p 4 4 2}The {cmd:cmd(}{cmd:)} option supports compound double quotes when employing Syntax 2. In this case,
 the user should specify the list of models as 
 {cmd:cmd(`" `"}{it:model1}{cmd:"'} [{cmd:`"}{it:model2}{cmd:"'} ...]{cmd: "')}.
+
+{p 4 4 2}The {cmd:cmd(}{cmd:)} option allows the user to specify different estimation samples for each model when employing Syntax 2. 
+When specifying different samples, you may want appropriately specify {cmd:strata(}{help varlist:varlist}{cmd:)} to ensure balanced sample
+sizes across bootstraps.
 
 
 {title:Citation}
