@@ -1,5 +1,5 @@
 *! wyoung 1.2 3aug2020 by Julian Reif
-* 1.2: familyp option now supports multiple variables
+* 1.2: familyp option now supports multiple variables. subgroup option added
 * 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
 * 1.0.5: familyp option now supports factor variables and time-series operators
 * 1.0.4: add support for commands that don't store p-values in r(table) (eg ivreg2)
@@ -7,16 +7,23 @@
 * 1.0.2: cluster bootstrap now required when clustered standard errors are present; force option added
 * 1.0.1: cluster bootstrap option added
 
+***
+* Notation
+***
+
+* K = number of hypotheses = num subgroups X num familyp X num outcomes
+* N = number of bootstraps
+
 program define wyoung, rclass
 
 	version 12
 
 	* Syntax 1: one model with multiple outcomes 
-	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) test(string) noRESAMPling seed(string) strata(varlist) cluster(varlist) force detail SINGLEstep familypexp replace]
+	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) test(string) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) force detail SINGLEstep familypexp replace]
 	
 	local outcome_vars "`varlist'"
 	
-	* Syntax 2: varying models with multiple outcomes/subgroups. 
+	* Syntax 2: different models with multiple outcomes 
 	if "`outcome_vars'"=="" {
 	
 		* Perform a full trim to remove leading and trailing spaces from the cmd() option
@@ -47,7 +54,7 @@ program define wyoung, rclass
 	if !mi("`seed'") {
 		cap set seed `seed'
 		if _rc {
-			di as error "invalid syntax for option {cmd:seed()}"
+			di as error "invalid syntax for option seed()"
 			set seed `seed'
 		}
 	}
@@ -63,7 +70,42 @@ program define wyoung, rclass
 		tempname id_cluster
 		local bs_cluster "cluster(`cluster') idcluster(`id_cluster')"
 	}
+	
+	* Subgroup option
+	local num_subgroups = 1
+	qui if "`subgroup'"!="" {
 		
+		if mi("`outcome_vars'") {
+			di as error "subgroup() option not allowed when employing Syntax 2 of wyoung"
+			exit 198
+		}
+		
+		* Ensure subgroups are all integers
+		local subgroup_err_msg = 0
+		cap confirm float var `subgroup'
+		if _rc==0 local subgroup_err_msg = 1
+		cap confirm double var `subgroup'
+		if _rc==0 local subgroup_err_msg = 1
+		if `subgroup_err_msg'==1 {
+			di as error "float or double variables not allowed in option subgroup()"
+			exit 109
+		}
+
+		* Subgroup option triggers stratified resampling, unless user overrides
+		if mi("`strata'") local bs_strata "strata(`subgroup')"
+		
+		* Subgroup option not allowed with a command that contains an "if" 
+		if strpos(`"`cmd'"', " if ") {
+			di as error "if expressions not allowed when specifying subgroup()"
+			exit 198
+		}
+		
+		levelsof `subgroup'
+		local subgroup_vals `"`r(levels)'"'
+		local num_subgroups : word count `subgroup_vals'
+	}
+	
+
 	******
 	* Syntax 1: user specifies varlist that will replace "OUTCOMEVAR"
 	******
@@ -84,7 +126,6 @@ program define wyoung, rclass
 			exit 198
 		}
 		
-		
 		* If weights are specified, ensure there is one weight variable for each regression
 		if "`weights'"!="" {
 			
@@ -100,31 +141,55 @@ program define wyoung, rclass
 			}
 		}
 
-		* K = number of hypotheses = num_outcomes X num_familypvars
-		local K = `num_familypvars' * `num_outcomes'
+		* K = number of hypotheses = num_subgroups X num_outcomes X num_familypvars
+		local K = `num_subgroups' * `num_familypvars' * `num_outcomes'
 		
 		* For each hypothesis k=1...K, define the outcome, familyp, and regression command
 		local k = 1
-		forval f = 1/`num_familypvars' {
+		forval s = 1/`num_subgroups' {
 			
-			if `num_familypvars'==1 local familyp_touse "`familyp'"
-			else {
-				tokenize `familyp'
-				local familyp_touse "``f''"
+			if "`subgroup'"!="" {
+				tokenize `subgroup_vals'
+				local subgroup_touse "``s''"
 			}
-			
-			forval i = 1/`num_outcomes' {
-
-				tokenize `outcome_vars'
-				local y ``i''
-				local outcomevar_`k' "`y'"
-				local familyp_`k' "`familyp_touse'"
+					
+			forval f = 1/`num_familypvars' {
 				
-				* Baseline regression
-				local tmp_`k':     subinstr local cmd     "OUTCOMEVAR" "`y'", word
-				local cmdline_`k': subinstr local tmp_`i' "WEIGHTVAR"  "`weightvar_`i''"
+				if `num_familypvars'==1 local familyp_touse "`familyp'"
+				else {
+					tokenize `familyp'
+					local familyp_touse "``f''"
+				}
+				
+				forval i = 1/`num_outcomes' {
 
-				local k = `k'+1
+					tokenize `outcome_vars'
+					local y ``i''
+					local outcomevar_`k' "`y'"
+					local familyp_`k' "`familyp_touse'"
+					local subgroup_`k' "`subgroup_touse'"
+					
+					* Baseline regression
+					local tmp_`k':     subinstr local cmd     "OUTCOMEVAR" "`y'", word
+					local cmdline_`k': subinstr local tmp_`i' "WEIGHTVAR"  "`weightvar_`i''"
+					
+					* Subgroup option: insert an if clause in front of the comma (if present)
+					if "`subgroup'"!="" {
+						local tmp `"`cmdline_`k''"'
+						local index_comma = strpos(`"`tmp'"', ",")
+						if `index_comma'==0 {
+							local cmd_part1 `"`tmp'"'
+						}
+						else {
+							mata: st_local("cmd_part1", substr(st_local("tmp"), 1, strpos(st_local("tmp"), ",")-1))
+							mata: st_local("cmd_part2", substr(st_local("tmp"), strpos(st_local("tmp"), ","), .))
+						}
+
+						local cmdline_`k' `"`cmd_part1' if `subgroup'==`subgroup_touse'`cmd_part2'"'
+					}
+
+					local k = `k'+1
+				}
 			}
 		}
 	}
@@ -196,7 +261,10 @@ program define wyoung, rclass
 
 	qui forval k = 1/`K' {
 
-		if `num_outcomes'==0 | mod(`k',`num_outcomes')==1 noi di as text _n "familyp: " as result `"`familyp_`k''"'
+		if "`subgroup'"!="" & mod(`k',`num_familypvars'*`num_outcomes')==1 noi di as text _n "subgroup: " as result `"`subgroup_`k''"'
+		else if (`num_outcomes'==0 | mod(`k',`num_outcomes')==1) noi di as text ""
+		if `num_outcomes'==0 | mod(`k',`num_outcomes')==1 noi di as text "familyp: " as result `"`familyp_`k''"'
+		
 		noi di in yellow _skip(4) `"`cmdline_`k''"'
 	
 		tempname p_`k' ystar_`k'
@@ -375,6 +443,7 @@ program define wyoung, rclass
 	qui gen double stderr = .
 	qui gen double p = .
 	qui gen familyp = ""
+	if !mi("`subgroup'") qui gen subgroup = .
 	if !mi("`detail'") qui gen N = .
 
 	qui forval k = 1/`K' {
@@ -384,6 +453,7 @@ program define wyoung, rclass
 		replace stderr = `stderr_`k''          if k==`k'
 		replace p  = `p_`k''                   if k==`k'
 		replace familyp = "`familyp_`k''"      if k==`k'
+		if !mi("`subgroup'") replace subgroup = `subgroup_`k'' if k==`k'
 		if !mi("`detail'") replace N = `N_`k'' if k==`k'
 	}	
 	
@@ -403,6 +473,7 @@ program define wyoung, rclass
 	qui replace    psidak = min(max((1-(1-p)^(`j')),psidak[_n-1]),1) if _n>1
 	
 	if !mi("`detail'") local Ns "N Navg Nmin Nmax"
+	if !mi("`subgroup'") local subgroup subgroup
 	
 	label var pbonf "Bonferroni-Holm p-value"
 	label var psidak "Sidak-Holm p-value"
@@ -431,7 +502,7 @@ program define wyoung, rclass
 	
 	sort k
 	drop `j'
-	order k model outcome familyp coef stderr p `Ns'
+	order k model outcome familyp `subgroup' coef stderr p `Ns'
 	list
 	
 	mkmat coef stderr p*, matrix(`mat')

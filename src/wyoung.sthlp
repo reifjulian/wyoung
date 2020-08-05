@@ -12,7 +12,7 @@ help {hi:wyoung}
 
 {p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help varlist:varlist}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
 [{cmd:seed(}{it:#}{cmd:)} 
-{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
+{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:subgroup(}{help varname:varname}{cmd:)} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
 
 {p 4 8 2}Syntax 2: multiple hypothesis testing {hline 2} different models with multiple outcomes
 
@@ -54,14 +54,19 @@ If only one {it:varname} is specified, {cmd:wyoung} applies it to all models.
 {cmd:. set seed} {it:#}
 
 {p 4 8 2}
-{cmd:strata(}{help varlist:varlist}{cmd:)} specifies variables identifying strata.  If {cmd:strata()} is specified, bootstrap samples are selected within each stratum.
+{cmd:strata(}{help varlist:varlist}{cmd:)} specifies variables identifying strata. If {cmd:strata()} is specified, bootstrap samples are selected within each stratum.
 
 {p 4 8 2}
 {cmd:cluster(}{help varlist:varlist}{cmd:)} specifies variables identifying clusters.  
 If {cmd:cluster()} is specified, the sample drawn during each replication is a bootstrap sample of clusters.
 
 {p 4 8 2}
-{cmd:force} allows the user to include a model with clustered standard errors without specifying the {cmd:cluster()} bootstrap option.
+{cmd:force} allows the user to include a model with clustered standard errors without also specifying the {cmd:cluster()} bootstrap option.
+
+{p 4 8 2}
+{cmd:subgroup(}{help varname:varname}{cmd:)} specifies an integer variable identifying subgroups. 
+If {cmd:subgroup()} is specified, {cmd:wyoung} will estimate models separately for each subgroup. 
+By default, specifying {cmd:subgroup()} will cause {cmd:wyoung} to select bootstrap samples within each subgroup, unless user specifies otherwise in {cmd:strata()}.
 
 {p 4 8 2}
 {cmd:singlestep} computes the single-step adjusted {it:p}-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their
