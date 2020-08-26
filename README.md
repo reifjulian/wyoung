@@ -1,6 +1,6 @@
 # WYOUNG: control the family-wise error rate when performing multiple hypothesis tests
 
-- Current version: `1.1 24jul2020`
+- Current version: `1.2 3aug2020`
 - Jump to: [`overview`](#overview) [`installation`](#Installation) [`update history`](#Update-history) [`citation`](#citation) 
 
 -----------
@@ -36,6 +36,9 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(di
 For each regression, the output reports unadjusted and adjusted *p*-values for the null hypothesis that the coefficient on the variable `displacement` is equal to 0. For example, in the regression `regress turn displacment length`, the unadjusted *p*-value is 0.09 and the Westfall-Young adjusted $p$-value is 0.14.
 ![Example 1](images/example1.PNG)
 ## Update History:
+* **1.2**
+  - `familyp()` option now supports multiple variables. `subgroup` option added
+
 * **1.1**
   - `familyp()` option now supports the testing of linear and nonlinear combinations of parameters
 
@@ -58,5 +61,5 @@ For each regression, the output reports unadjusted and adjusted *p*-values for t
 
 `wyoung` is not an official Stata command. It is a free contribution to the research community. You may cite it as:
 
-Jones, D., D. Molitor, and J. Reif. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." *The Quarterly Journal of Economics*, November 2019, 134(4): 1747-1791.
+Jones, D., D. Molitor, and J. Reif. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." *Quarterly Journal of Economics*, November 2019, 134(4): 1747-1791.
 
