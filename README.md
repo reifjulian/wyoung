@@ -15,19 +15,19 @@ For more details, see the Stata help file included in this package. Additional d
 
 Type `which wyoung` at the Stata prompt to determine your `wyoung` version. To install the most recent version, copy and paste the following line of code:
 
-```
+```stata
 net install wyoung, from("https://raw.githubusercontent.com/reifjulian/wyoung/master") replace
 ```
 
 To install the version that was uploaded to SSC, copy/paste the following line of code:
-```
+```stata
 ssc install wyoung, replace
 ```
 
 These two versions are typically synced, but occasionally the SSC version may be slightly out of date.
 
 ## Examples
-1. Test whether the outcome variables `mpg`, `headroom`, or `turn` are significantly associated with `displacement` (conditional on `length`) after controlling for multiple inference.
+1. Test whether the outcome variables `mpg`, `headroom`, or `turn` are significantly associated with `displacement`, conditional on `length` (3 hypotheses).
 ```stata
 sysuse auto.dta, clear
 set seed 20
@@ -35,6 +35,32 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(di
 ```
 For each regression, the output reports unadjusted and adjusted *p*-values for the null hypothesis that the coefficient on the variable `displacement` is equal to 0. For example, in the regression `regress turn displacment length`, the unadjusted *p*-value is 0.09 and the Westfall-Young adjusted $p$-value is 0.14.
 ![Example 1](images/example1.PNG)
+
+1. Estimate models separately for the two subgroups defined by `foreign` (3 X 2 = 6 hypotheses).
+```stata
+sysuse auto.dta, clear
+set seed 20
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign) bootstraps(100)
+```
+![Example 2](images/example_subgroup.PNG)
+
+1. Estimate models separately for the two subgroups defined by `foreign`, and also calculate adjusted *p*-values for length (3 X 2 X 2 = 12 hypotheses).
+```stata
+sysuse auto.dta, clear
+set seed 20
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign) bootstraps(100)
+```
+![Example 3](images/example_manytreat.PNG)
+
+1. Test the linear restriction `_b[length] + 50*_b[displacement] = 0` (3 hypotheses).
+
+```stata
+sysuse auto.dta, clear
+set seed 20
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp bootstraps(100)
+```
+![Example 4](images/example_lincom.PNG)
+
 ## Update History:
 * **1.2**
   - `familyp()` option now supports multiple variables. `subgroup` option added

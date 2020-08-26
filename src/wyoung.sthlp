@@ -158,13 +158,13 @@ sizes across bootstraps.
 
 {p 4 4 2}4. Estimate models separately for the two subgroups defined by {it:foreign} (3 X 2 = 6 hypotheses).
 
-{col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement) subgroup(foreign) bootstraps(100) seed(20)}}
+{col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign) bootstraps(100) seed(20)}}
 
 {p 4 4 2}5. Estimate models separately for the two subgroups defined by {it:foreign}, and also calculate adjusted {it:p}-values for {it:length} (3 X 2 X 2 = 12 hypotheses).
 
-{col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement length) subgroup(foreign) bootstraps(100) seed(20)}}
+{col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign) bootstraps(100) seed(20)}}
 
-{p 4 4 2}6. Test the linear restriction {it:_b[length] + 50*_b[displacement] = 0}.
+{p 4 4 2}6. Test the linear restriction {it:_b[length] + 50*_b[displacement] = 0} (3 hypotheses).
 
 {col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp bootstraps(100) seed(20)}}
 
