@@ -27,16 +27,16 @@ ssc install wyoung, replace
 These two versions are typically synced, but occasionally the SSC version may be slightly out of date.
 
 ## Examples
-1. Test whether the outcome variables `mpg`, `headroom`, or `turn` are significantly associated with `displacement`, conditional on `length` (3 hypotheses).
+Example 1. Test whether the outcome variables `mpg`, `headroom`, or `turn` are significantly associated with `displacement`, conditional on `length` (3 hypotheses).
 ```stata
 sysuse auto.dta, clear
 set seed 20
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100)
 ```
-For each regression, the output reports unadjusted and adjusted *p*-values for the null hypothesis that the coefficient on the variable `displacement` is equal to 0. For example, in the regression `regress turn displacment length`, the unadjusted *p*-value is 0.09 and the Westfall-Young adjusted $p$-value is 0.14.
 ![Example 1](images/example1.PNG)
+For each regression, the output reports unadjusted and adjusted *p*-values for the null hypothesis that the coefficient on the variable `displacement` is equal to 0. For example, in the regression `regress turn displacment length`, the unadjusted *p*-value is 0.09 and the Westfall-Young adjusted $p$-value is 0.14.
 
-1. Estimate models separately for the two subgroups defined by `foreign` (3 X 2 = 6 hypotheses).
+Example 2. Estimate models separately for the two subgroups defined by `foreign` (3 X 2 = 6 hypotheses).
 ```stata
 sysuse auto.dta, clear
 set seed 20
@@ -44,7 +44,7 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(di
 ```
 ![Example 2](images/example_subgroup.PNG)
 
-1. Estimate models separately for the two subgroups defined by `foreign`, and also calculate adjusted *p*-values for length (3 X 2 X 2 = 12 hypotheses).
+Example 3. Estimate models separately for the two subgroups defined by `foreign`, and also calculate adjusted *p*-values for length (3 X 2 X 2 = 12 hypotheses).
 ```stata
 sysuse auto.dta, clear
 set seed 20
@@ -52,7 +52,7 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(di
 ```
 ![Example 3](images/example_manytreat.PNG)
 
-1. Test the linear restriction `_b[length] + 50*_b[displacement] = 0` (3 hypotheses).
+Example 4. Test the linear restriction `_b[length] + 50*_b[displacement] = 0` (3 hypotheses).
 
 ```stata
 sysuse auto.dta, clear
