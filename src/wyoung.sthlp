@@ -8,44 +8,41 @@ help {hi:wyoung}
 
 {title:Syntax}
 
-{p 4 8 2}Syntax 1: multiple hypothesis testing {hline 2} one model with multiple outcomes
+{p 4 8 2}Syntax 1: multiple hypothesis testing {hline 2} one model with multiple outcomes and subgroups
 
-{p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help exp:exp}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
+{p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help varlist:varlist}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
 [{cmd:seed(}{it:#}{cmd:)} 
-{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:replace}]
+{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:subgroup(}{help varname:varname}{cmd:)} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
 
-{p 4 8 2}Syntax 2: multiple hypothesis testing {hline 2} different models with multiple outcomes and multiple subgroups
+{p 4 8 2}Syntax 2: multiple hypothesis testing {hline 2} different models with multiple outcomes and subgroups
 
-{p 8 14 2}{cmd:wyoung}, {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} {cmd:familyp(}{help exp:exp}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
+{p 8 14 2}{cmd:wyoung}, {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} {cmd:familyp("}{it:varname1}{cmd:"} [{cmd:"}{it:varname2}{cmd:"} ...]{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
 [{cmd:seed(}{it:#}{cmd:)} 
-{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:replace}]
+{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
 
-{p 4 8 2}where
-
-{p 8 14 2}{help exp:exp} is any linear combination of coefficients that is valid syntax for {help lincom:lincom} or {help nlcom:nlcom}.  
-{help exp:exp} must not contain an equal sign.
 
 {title:Options}
 
 {p 4 8 2}
-{cmd:cmd(}{cmd:)}
+{cmd:cmd(}{cmd:)}, {cmd:familyp(}{cmd:)}
 
-{p 8 8 2} Syntax 1: one model with multiple outcomes
+{p 8 8 2} Syntax 1: one model with multiple outcomes (see example 1 below)
 
 {p 12 12 2}
 {cmd:cmd(}{it:model}{cmd:)} specifies a single model with the multiple outcomes {help varlist:varlist}. The outcome (dependent) variable is indicated in {it:model} by "OUTCOMEVAR" (upper case).
 {cmd:wyoung} will estimate multiple outcome specifications by substituting each variable from {help varlist:varlist} into "OUTCOMEVAR".
-See example 1 below.
-
-{p 8 8 2} Syntax 2: different models with multiple outcomes and multiple subgroups
 
 {p 12 12 2}
-{cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} specifies a list of models. See example 2 below.
+{cmd:familyp(}{help varlist:varlist}{cmd:)} instructs {cmd:wyoung} to calculate adjusted {it:p}-values for the null hypotheses that the coefficients of {it: varlist} are equal to 0.
 
-{p 4 8 2}
-{cmd:familyp(}{help exp:exp}{cmd:)} specifies a coefficient or a combination of coefficients.
-{help exp:exp} follows the syntax of {help lincom:lincom} and {help nlcom:nlcom}.
-For example, specifying {cmd:familyp(}{it:varname}{cmd:)} is equivalent to specifying {cmd:familyp(}{it:_b[varname]}{cmd:)}.
+{p 8 8 2} Syntax 2: different models with multiple outcomes (see example 2 below)
+
+{p 12 12 2}
+{cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} specifies a list of models. 
+
+{p 12 12 2}
+{cmd:familyp("}{it:varname1}{cmd:"} [{cmd:"}{it:varname2}{cmd:"} ...]{cmd:)} instructs {cmd:wyoung} to calculate adjusted {it:p}-values for the null hypotheses that the coefficient of {it: varname1} is equal to 0 in {it: model1}, the coefficient of {it: varname2} is equal to 0 in {it: model2}, etc.
+If only one {it:varname} is specified, {cmd:wyoung} applies it to all {it:model}s.
 
 {p 4 8 2}
 {cmd:bootstraps(}{it:#}{cmd:)} performs # bootstrap replications for resampling. Westfall and Young (1993) recommend using at least 10,000 bootstraps.
@@ -57,14 +54,20 @@ For example, specifying {cmd:familyp(}{it:varname}{cmd:)} is equivalent to speci
 {cmd:. set seed} {it:#}
 
 {p 4 8 2}
-{cmd:strata(}{help varlist:varlist}{cmd:)} specifies variables identifying strata.  If {cmd:strata()} is specified, bootstrap samples are selected within each stratum.
+{cmd:strata(}{help varlist:varlist}{cmd:)} specifies variables identifying strata. If {cmd:strata()} is specified, bootstrap samples are selected within each stratum.
 
 {p 4 8 2}
 {cmd:cluster(}{help varlist:varlist}{cmd:)} specifies variables identifying clusters.  
 If {cmd:cluster()} is specified, the sample drawn during each replication is a bootstrap sample of clusters.
 
 {p 4 8 2}
-{cmd:force} allows the user to include a model with clustered standard errors without specifying the {cmd:cluster()} bootstrap option.
+{cmd:force} allows the user to include a model with clustered standard errors without also specifying the {cmd:cluster()} bootstrap option.
+
+{p 4 8 2}
+{cmd:subgroup(}{help varname:varname}{cmd:)} specifies an integer variable identifying subgroups. 
+If {cmd:subgroup()} is specified, {cmd:wyoung} will estimate models separately for each subgroup. 
+By default, specifying {cmd:subgroup()} will cause {cmd:wyoung} to select bootstrap samples within each subgroup, unless you specify otherwise in {cmd:strata()}.
+This option is only available when employing Syntax 1.
 
 {p 4 8 2}
 {cmd:singlestep} computes the single-step adjusted {it:p}-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their
@@ -75,6 +78,13 @@ step-down counterparts also control the type III error rate is unknown (Westfall
 
 {p 4 8 2}
 {cmd:noresampling} computes only the Bonferroni-Holm and Sidak-Holm adjusted {it:p}-values (very fast).
+
+{p 4 8 2}
+{cmd:familypexp} indicates that you are providing {cmd:familyp(}{help exp:exp}{cmd:)} instead of {cmd:familyp(}{help varlist:varlist}{cmd:)} when employing Syntax 1, where {help exp:exp} specifies a coefficient or combination of coefficients.
+{help exp:exp} follows the syntax of {help lincom:lincom} and {help nlcom:nlcom} and must not contain an equal sign.
+If employing Syntax 2, then {cmd:familypexp} indicates that 
+you are providing {cmd:familyp("}{it:exp1}{cmd:"} [{cmd:"}{it:exp2}{cmd:"} ...]{cmd:)} instead of {cmd:familyp("}{it:varname1}{cmd:"} [{cmd:"}{it:varname2}{cmd:"} ...]{cmd:)}.
+Specifying {cmd:familypexp} increases the set of possible hypothesis tests, but may cause {cmd:wyoung} to produce less helpful error messages when you make a syntax mistake.
 
 {p 4 8 2}
 {cmd:replace} replaces data in memory with {cmd:wyoung} results.
@@ -118,39 +128,45 @@ If the residual degrees of freedom are unavailable, the unadjusted {it:p}-value 
 the user should specify the list of models as 
 {cmd:cmd(`" `"}{it:model1}{cmd:"'} [{cmd:`"}{it:model2}{cmd:"'} ...]{cmd: "')}.
 
+{p 4 4 2}The {cmd:cmd(}{cmd:)} option allows the user to specify different estimation samples for each model when employing Syntax 2. 
+When specifying different samples, you may want to appropriately specify {cmd:strata(}{help varlist:varlist}{cmd:)} to ensure balanced sample
+sizes across bootstraps.
+
 
 {title:Citation}
 
 {p 4 4 2}{cmd:wyoung} is not an official Stata command. It is a free contribution to the research community. You may cite it as:
 
-{p 8 8 2}Jones, D., D. Molitor, and J. Reif. 2019. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." {it:The Quarterly Journal of Economics}, November 2019, 134(4): 1747-1791.
+{p 8 8 2}Jones, D., D. Molitor, and J. Reif. 2019. "What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study." {it:Quarterly Journal of Economics}, November 2019, 134(4): 1747-1791.
 
 
 {title:Examples}
 
-{p 4 4 2}1. Test whether the outcome variables {it:mpg}, {it:headroom}, or {it:turn} are significantly associated with {it:displacement}, conditional on {it:length}.
+{p 4 4 2}1. Test whether the outcome variables {it:mpg}, {it:headroom}, or {it:turn} are significantly associated with {it:displacement}, conditional on {it:length} (3 hypotheses). 
 
 {col 8}{cmd:. {stata sysuse auto.dta, clear}}
 
 {col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100) seed(20)}}
 
-{p 4 4 2}2. Same as example 1, but employs an alternative syntax.
-
-{col 8}{cmd:. {stata sysuse auto.dta, clear}}
+{p 4 4 2}2. Identical to example 1, but employs Syntax 2.
 
 {col 8}{cmd:. {stata wyoung, cmd("regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length") familyp(displacement) bootstraps(100) seed(20)}}
 
-{p 4 4 2}3. Same as example 1, but employs clustered standard errors.
-
-{col 8}{cmd:. {stata sysuse auto.dta, clear}}
+{p 4 4 2}3. Employ clustered standard errors.
 
 {col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement) bootstraps(100) seed(20)}}
 
-{p 4 4 2}4. Test the linear restriction {it:_b[length] + 50*_b[displacement] = 0}.
+{p 4 4 2}4. Estimate models separately for the two subgroups defined by {it:foreign} (3 X 2 = 6 hypotheses).
 
-{col 8}{cmd:. {stata sysuse auto.dta, clear}}
+{col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement) subgroup(foreign) bootstraps(100) seed(20)}}
 
-{col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) bootstraps(100) seed(20)}}
+{p 4 4 2}5. Estimate models separately for the two subgroups defined by {it:foreign}, and also calculate adjusted {it:p}-values for {it:length} (3 X 2 X 2 = 12 hypotheses).
+
+{col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement length) subgroup(foreign) bootstraps(100) seed(20)}}
+
+{p 4 4 2}6. Test the linear restriction {it:_b[length] + 50*_b[displacement] = 0}.
+
+{col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp bootstraps(100) seed(20)}}
 
 
 {title:Stored results}

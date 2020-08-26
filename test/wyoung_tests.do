@@ -7,21 +7,7 @@ adopath ++"../src"
 version 15
 set more off
 set tracedepth 1
-
-*********************************************
-* Multiple restrictions
-*********************************************
-sysuse auto, clear
-wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(length+50*displacement) bootstraps(100) seed(20) replace
-cf _all using "compare/multiple1.dta"
-
-sysuse auto, clear
-cap wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]=1) bootstraps(100) seed(20) replace
-assert _rc==198
-replace length = length*100
-replace headroom = headroom*1000
-wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]-1) bootstraps(100) seed(20) replace
-cf _all using "compare/multiple2.dta"
+* set trace on
 
 *********************************************
 * Example 1
@@ -56,11 +42,17 @@ foreach v of varlist p* {
 
 * Alternative syntax
 sysuse auto, clear
-wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]) bootstraps(100) seed(20) replace
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]) bootstraps(100) seed(20) replace familypexp
 cf k-outcome coef-psidak using "compare/examp1.dta"
 
 sysuse auto, clear
-wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]-0) bootstraps(100) seed(20) replace
+cap wyoung, cmd(`" `""regress mpg displacement length""' `""regress headroom displacement length""' `""regress turn displacement length""' "') familyp(_b[displacement) bootstraps(100) seed(20) replace
+assert _rc==111
+wyoung, cmd(`" `""regress mpg displacement length""' `""regress headroom displacement length""' `""regress turn displacement length""' "') familyp(_b[displacement]) bootstraps(100) seed(20) replace familypexp
+cf k-outcome coef-psidak using "compare/examp1.dta"
+
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(_b[displacement]-0) bootstraps(100) seed(20) replace familypexp
 cf k-outcome coef-psidak using "compare/examp1.dta"
 
 *********************************************
@@ -198,6 +190,7 @@ cf _all using "compare/examp_fv.dta"
 
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i1.foreign") bootstraps(5) seed(20) replace
+cf _all using "compare/examp_fv.dta"
 
 * Generate error if user inputs factor variable that is not estimated
 sysuse auto, clear
@@ -209,6 +202,68 @@ sysuse auto, clear
 cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i.weight#i.weight") bootstraps(5) seed(20) replace
 assert _rc==198
 
+cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i.weight2#i.weight") bootstraps(5) seed(20) replace
+assert _rc==111
+
+
+*********************************************
+* Multiple restrictions
+*********************************************
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(length+50*displacement) bootstraps(100) seed(20) replace familypexp
+cf _all using "compare/multiple1.dta"
+
+sysuse auto, clear
+cap wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]=1) bootstraps(100) seed(20) replace familypexp
+assert _rc==198
+replace length = length*100
+replace headroom = headroom*1000
+wyoung length headroom price, cmd("regress OUTCOMEVAR mpg weight  turn displacement") familyp(_b[weight]*_b[displacement]-1) bootstraps(100) seed(20) replace familypexp
+cf _all using "compare/multiple2.dta"
+
+*********************************************
+* Multiple treatments
+*********************************************
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement length) bootstraps(100) seed(20) replace
+cf _all using "compare/multiple3.dta"
+
+sysuse auto, clear
+wyoung, cmd("regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length" "regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length" ) familyp(displacement displacement displacement length length length) bootstraps(100) seed(20) replace
+cf _all using "compare/multiple3.dta"
+
+sysuse auto, clear
+wyoung, cmd("regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length" "regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length" ) familyp(`" "displacement" "displacement" "displacement" "length" "length" "length" "') bootstraps(100) seed(20) replace
+cf _all using "compare/multiple3.dta"
+
+
+*********************************************
+* subgroup examples
+*********************************************
+
+* subgroup() option
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) subgroup(foreign) bootstraps(100) seed(20) replace
+cf _all using "compare/subgroup1.dta"
+
+* Alternative way to replicate the subgroup() option
+sysuse auto, clear
+wyoung, cmd("regress mpg displacement length if foreign==0" "regress headroom displacement length if foreign==0" "regress turn displacement length if foreign==0" "regress mpg displacement length if foreign==1" "regress headroom displacement length if foreign==1" "regress turn displacement length if foreign==1") familyp(displacement) bootstraps(100) strata(foreign) seed(20) replace
+cf _all using "compare/subgroup1.dta"
+
+sysuse auto, clear
+cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) subgroup(gear_ratio) bootstraps(100) seed(20) replace
+assert _rc==109
+cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length if price<100") familyp(displacement) subgroup(foreign) bootstraps(100) seed(20) replace
+assert _rc==198
+cap wyoung, cmd(`" `""regress mpg displacement length, cluster(foreign)""' `""regress headroom displacement length, cluster(foreign)""' `""regress turn displacement length, cluster(foreign)""' "') cluster(foreign) familyp(displacement) subgroup(foreign) bootstraps(10) seed(20) replace
+assert _rc==198
+cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) subgroup(price) bootstraps(100) seed(20) replace
+assert _rc==2001
+
+sysuse auto, clear
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length, robust") familyp(displacement length) subgroup(foreign) bootstraps(100) seed(20) replace
+cf _all using "compare/subgroup2.dta"
 
 ******************************************************************************************************************************************
 * Simulations (NSIM=1):
