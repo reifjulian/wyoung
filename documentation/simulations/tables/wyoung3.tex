@@ -7,25 +7,25 @@
 \begin{table}[tbp] \centering
 \newcolumntype{C}{>{\centering\arraybackslash}X}
 
-\caption{Family-wise rejection proportions at \(\alpha = 0.05\), when testing hypotheses with multiple restrictions}
+\caption{Family-wise rejection proportions at \(\alpha = 0.05\), when testing hypotheses with multiple regressors or restrictions}
 \label{tab:wyoung3}
-\begin{tabularx}{\linewidth}{lCC}
+\begin{tabularx}{\textwidth}{lCCC}
 
 \toprule
-&{(1)}&{(2)} \tabularnewline \midrule
-{Adjustment method}&{Linear restriction}&{Nonlinear restriction} \tabularnewline
-\midrule \addlinespace[\belowrulesep]
-Unadjusted&0.440&0.435 \tabularnewline
-Bonferroni-Holm&0.052&0.064 \tabularnewline
-Sidak-Holm&0.052&0.066 \tabularnewline
-Westfall-Young&0.051&0.063 \tabularnewline
-\midrule Num. observations&100&100 \tabularnewline
-Num. hypotheses&10&10 \tabularnewline
-\bottomrule \addlinespace[\belowrulesep]
+&{(1)}&{(2)}&{(3)} \tabularnewline
+{Adjustment method}&{Multiple regressors}&{Linear restriction}&{Nonlinear restriction} \tabularnewline
+\midrule\addlinespace[1.5ex]
+Unadjusted&0.634&0.440&0.435 \tabularnewline
+Bonferroni-Holm&0.043&0.052&0.064 \tabularnewline
+Sidak-Holm&0.045&0.052&0.066 \tabularnewline
+Westfall-Young&0.041&0.051&0.063 \tabularnewline
+\midrule Num. observations&100&100&100 \tabularnewline
+Num. hypotheses&20&10&10 \tabularnewline
+\bottomrule \addlinespace[1.5ex]
 
 \end{tabularx}
 \begin{flushleft}
-\footnotesize Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. All null hypotheses are true, i.e., lower rejection rates are better. The Westfall-Young correction is performed using 1,000 bootstraps.
+\footnotesize Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, i.e., lower rejection rates are better. Section \ref{SS-multiple regressors} describes the data-generating process used in Column (1). Section \ref{SS-combination} describes the data-generating process used in Columns (2) and (3). The Westfall-Young correction is performed using 1,000 bootstraps.
 \end{flushleft}
 \end{table}
 \end{document}
