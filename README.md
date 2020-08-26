@@ -7,9 +7,9 @@
 
 ## Overview: 
 
-`wyoung` is a [Stata](http://www.stata.com) command that calculates adjusted *p*-values using the free step-down resampling methodology of Westfall and Young (1993). It also computes the Bonferroni-Holm and Sidak-Holm adjusted *p*-values.
+`wyoung` is a [Stata](http://www.stata.com) command that calculates adjusted *p*-values using the free step-down resampling methodology of Westfall and Young (1993). It also computes the Bonferroni-Holm and Sidak-Holm adjusted *p*-values. Additional documentation is available [here](/documentation/wyoung.pdf).
 
-For more details, see the Stata help file included in this package. Additional documentation is available [here](/documentation/wyoung.pdf).
+This command was developed as part of the [Illinois Workplace Wellness Study](https://www.nber.org/workplacewellness/).
 
 ## Installation:
 
@@ -24,7 +24,7 @@ To install the version that was uploaded to SSC, copy/paste the following line o
 ssc install wyoung, replace
 ```
 
-These two versions are typically synced, but occasionally the SSC version may be slightly out of date.
+After installing, type `help wyoung` to learn the syntax.
 
 ## Examples
 *Example 1.* Test whether the outcome variables `mpg`, `headroom`, or `turn` are significantly associated with `displacement`, conditional on `length` (3 hypotheses).
