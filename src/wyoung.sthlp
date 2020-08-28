@@ -109,8 +109,7 @@ in a general multivariate regression model with possibly non-normal distribution
 
 {p 4 4 2}The free step-down resampling method employed by {cmd:wyoung} is based on Algorithm 2.8 of Westfall and Young (1993). 
 The single-step resampling method (see option {cmd:singlestep}) is based on Algorithm 2.5 of Westfall and Young (1993). Detailed documentation 
-is available online at {browse "https://www.nber.org/workplacewellness/s/wyoung.pdf":www.nber.org/workplacewellness/s/wyoung.pdf}.
-The accompanying Stata code is available at {browse "https://www.nber.org/workplacewellness/s/wyoung_simulations.do":www.nber.org/workplacewellness/s/wyoung_simulations.do}.
+is available online at {browse "https://reifjulian.github.io/wyoung/documentation/wyoung.pdf":https://reifjulian.github.io/wyoung/documentation/wyoung.pdf}.
 
 {p 4 4 2}The Bonferroni-Holm and Sidak-Holm step-down {it:p}-values are calculated as follows. Sort the {it:J} unadjusted {it:p}-values so that {it:p(1)<p(2)<...<p(J)}. 
 The Bonferroni-Holm adjusted {it:p}-values are calculated as {it:{p(1)*J, max[p(1),p(2)*(J-1)],..., max[p(J-1),p(J)]}}. 
