@@ -3,11 +3,22 @@ cscript wyoung adofile wyoung
 set linesize `linesize'
 
 clear
-adopath ++"../src"
+adopath ++ "../src"
 version 15
 set more off
 set tracedepth 1
 * set trace on
+
+
+* Control var example
+sysuse auto, clear
+wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" "gear_ratio") bootstraps(50) seed(20) replace
+cf _all using "compare/controlvars.dta"
+
+sysuse auto, clear
+wyoung, cmd(`" `""regress mpg displacement length weight""' `""regress headroom displacement length weight""' `""regress mpg displacement gear_ratio""' `""regress headroom displacement gear_ratio""' "') familyp(displacement) bootstraps(50) seed(20) replace
+cf _all using "compare/controlvars.dta"
+
 
 *********************************************
 * Example 1
