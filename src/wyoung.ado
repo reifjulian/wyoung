@@ -13,7 +13,6 @@
 ***
 
 * To do: Update the help file. Add more QC. Bring the WEIGHTVAR up to date.
-* To do: check error codes. use `rcof noi`
 
 * K = number of hypotheses = num subgroups X num familyp X num outcomes X num controls
 * N = number of bootstraps

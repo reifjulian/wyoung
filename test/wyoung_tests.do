@@ -57,7 +57,7 @@ wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(
 cf k-outcome coef-psidak using "compare/examp1.dta"
 
 sysuse auto, clear
-cap wyoung, cmd(`" `""regress mpg displacement length""' `""regress headroom displacement length""' `""regress turn displacement length""' "') familyp(_b[displacement) bootstraps(100) seed(20) replace
+rcof noi wyoung, cmd(`" `""regress mpg displacement length""' `""regress headroom displacement length""' `""regress turn displacement length""' "') familyp(_b[displacement) bootstraps(100) seed(20) replace
 assert _rc==111
 wyoung, cmd(`" `""regress mpg displacement length""' `""regress headroom displacement length""' `""regress turn displacement length""' "') familyp(_b[displacement]) bootstraps(100) seed(20) replace familypexp
 cf k-outcome coef-psidak using "compare/examp1.dta"
@@ -81,7 +81,7 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(re
 cf _all using "compare/examp3.dta"
 
 * Failing to specify bootwstrap cluster should generate an error when clustering, unless force option is specified
-cap wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) familyp(displacement) bootstraps(10) seed(20)
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) familyp(displacement) bootstraps(10) seed(20)
 assert _rc==198
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) familyp(displacement) bootstraps(10) seed(20) force
 
@@ -119,29 +119,29 @@ cf outcome familyp pwyoung using "compare/examp_areg.dta"
 
 * Invalid seeds should generate a syntax error
 sysuse auto, clear
-cap wyoung mpg headroom turn, cmd(regress OUTCOMEVAR weight length) familyp(weight) bootstraps(10) seed(x)
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR weight length) familyp(weight) bootstraps(10) seed(x)
 assert _rc==198
 
 * For main syntax, "OUTCOMEVAR" must be present
 sysuse auto, clear
-cap wyoung mpg headroom turn, cmd(regress OUTCOMEVA weight length) familyp(weight) bootstraps(10)
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVA weight length) familyp(weight) bootstraps(10)
 assert _rc==198
 
-cap wyoung mpg headroom turn, cmd(regress OUTCOMEVARS weight length) familyp(weight) bootstraps(10)
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVARS weight length) familyp(weight) bootstraps(10)
 assert _rc==198
 
-cap wyoung mpg headroom turn, cmd(regress OUTCOMEVARweight length) familyp(weight) bootstraps(10)
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVARweight length) familyp(weight) bootstraps(10)
 assert _rc==198
 
 
 * familyp var must be listed in all regressions
 sysuse auto, clear
-cap wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(weight) bootstraps(100) seed(20) replace
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(weight) bootstraps(100) seed(20) replace
 assert _rc==111
 
 *nbootstraps must be greater than 0
 sysuse auto, clear
-cap wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(weight) bootstraps(0) seed(20) replace
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(weight) bootstraps(0) seed(20) replace
 assert _rc==198
 
 * clustering example
@@ -156,21 +156,21 @@ cf outcome familyp pwyoung using "compare/examp_cluster.dta"
 sysuse auto, clear
 keep in 1/10
 replace mpg=. in 1/10
-cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace
+rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace
 assert _rc==2000
 
 * 2) Insufficient data to calculate p-val in initial regression
 sysuse auto, clear
 keep in 1/10
 replace mpg=. in 1/7
-cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace
+rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace
 assert _rc==504
 
 * 3) Missing data in bootstrapped regression
 sysuse auto, clear
 keep in 1/10
 replace mpg=. in 1/6
-cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace
+rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace
 assert _rc==2001
 
 * 4) Insufficient variation
@@ -188,7 +188,7 @@ cf _all using "compare/iv1.dta"
 
 * Generate error if user incorrectly asks for familyp value for the instrument
 sysuse auto, clear
-cap wyoung trunk foreign rep78, cmd("ivreg2 OUTCOMEVAR (length=price)") familyp(price) bootstraps(100) seed(20) replace
+rcof noi wyoung trunk foreign rep78, cmd("ivreg2 OUTCOMEVAR (length=price)") familyp(price) bootstraps(100) seed(20) replace
 assert _rc == 111
 
 *******************************
@@ -205,15 +205,15 @@ cf _all using "compare/examp_fv.dta"
 
 * Generate error if user inputs factor variable that is not estimated
 sysuse auto, clear
-cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i0.foreign") bootstraps(5) seed(20) replace
+rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i0.foreign") bootstraps(5) seed(20) replace
 assert _rc==504
 
 * Generate error if user inputs nonsense factor variables
 sysuse auto, clear
-cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i.weight#i.weight") bootstraps(5) seed(20) replace
+rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i.weight#i.weight") bootstraps(5) seed(20) replace
 assert _rc==198
 
-cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i.weight2#i.weight") bootstraps(5) seed(20) replace
+rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i.weight2#i.weight") bootstraps(5) seed(20) replace
 assert _rc==111
 
 
@@ -263,13 +263,13 @@ wyoung, cmd("regress mpg displacement length if foreign==0" "regress headroom di
 cf _all using "compare/subgroup1.dta"
 
 sysuse auto, clear
-cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) subgroup(gear_ratio) bootstraps(100) seed(20) replace
+rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) subgroup(gear_ratio) bootstraps(100) seed(20) replace
 assert _rc==109
-cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length if price<100") familyp(displacement) subgroup(foreign) bootstraps(100) seed(20) replace
+rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length if price<100") familyp(displacement) subgroup(foreign) bootstraps(100) seed(20) replace
 assert _rc==198
-cap wyoung, cmd(`" `""regress mpg displacement length, cluster(foreign)""' `""regress headroom displacement length, cluster(foreign)""' `""regress turn displacement length, cluster(foreign)""' "') cluster(foreign) familyp(displacement) subgroup(foreign) bootstraps(10) seed(20) replace
+rcof noi wyoung, cmd(`" `""regress mpg displacement length, cluster(foreign)""' `""regress headroom displacement length, cluster(foreign)""' `""regress turn displacement length, cluster(foreign)""' "') cluster(foreign) familyp(displacement) subgroup(foreign) bootstraps(10) seed(20) replace
 assert _rc==198
-cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) subgroup(price) bootstraps(100) seed(20) replace
+rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) subgroup(price) bootstraps(100) seed(20) replace
 assert _rc==2001
 
 sysuse auto, clear

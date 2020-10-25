@@ -12,7 +12,8 @@ help {hi:wyoung}
 
 {p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help varlist:varlist}{cmd:)} {cmdab:boot:straps(}{it:#}{cmd:)} 
 [{cmd:seed(}{it:#}{cmd:)} 
-{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:subgroup(}{help varname:varname}{cmd:)} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
+{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:subgroup(}{help varname:varname}{cmd:)} 
+{cmd:controls(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
 
 {p 4 8 2}Syntax 2: multiple hypothesis testing {hline 2} different models with multiple outcomes and subgroups
 
@@ -68,6 +69,12 @@ If {cmd:cluster()} is specified, the sample drawn during each replication is a b
 If {cmd:subgroup()} is specified, {cmd:wyoung} will estimate models separately for each subgroup. 
 By default, specifying {cmd:subgroup()} will cause {cmd:wyoung} to select bootstrap samples within each subgroup, unless you specify otherwise in {cmd:strata()}.
 This option is only available when employing Syntax 1.
+
+{p 4 8 2}
+{cmd:controls(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} instructs {cmd:wyoung} to estimate the model separately for each set of controls. 
+This option is only available when employing Syntax 1. The control variables are indicated in {it:model} by "CONTROLVARS" (uppder case).
+{cmd:wyoung} will estimate multiple specifications by substituting each varlist into "CONTROLVARS".
+
 
 {p 4 8 2}
 {cmd:singlestep} computes the single-step adjusted {it:p}-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their
