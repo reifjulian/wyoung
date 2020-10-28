@@ -1,4 +1,4 @@
-*! wyoung 1.3 24oct2020 by Julian Reif
+*! wyoung 1.3 28oct2020 by Julian Reif
 * 1.3: controls option added
 * 1.2: familyp option now supports multiple variables. subgroup option added
 * 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
@@ -11,8 +11,6 @@
 ***
 * Notation
 ***
-
-* To do: Update the help file. Add more QC. Bring the WEIGHTVAR up to date.
 
 * K = number of hypotheses = num subgroups X num familyp X num outcomes X num controls
 * N = number of bootstraps
@@ -167,7 +165,7 @@ program define wyoung, rclass
 			exit 198
 		}
 		
-		* If weights are specified, ensure there is one weight variable for each regression
+		* If weights are specified, ensure there is exactly one weight variable for each outcome
 		* Note: this option is undocumented
 		if "`weights'"!="" {
 			
@@ -210,16 +208,15 @@ program define wyoung, rclass
 					forval i = 1/`num_outcomes' {
 
 						tokenize `outcome_vars'
-						local y ``i''
-						local outcomevar_`k' "`y'"
+						local outcomevar_`k' "``i''"
 						local familyp_`k' "`familyp_touse'"
 						local subgroup_`k' "`subgroup_touse'"
 						local controls_`k' "`controls_touse'"
 						
-						* Baseline regression (note: WEIGHTVAR substitution here is an undocumented feature)
-						local tmp_`k':     subinstr local cmd     "OUTCOMEVAR" "`y'", word
-						local cmdline_`k': subinstr local tmp_`i' "WEIGHTVAR"  "`weightvar_`i''"
-						local cmdline_`k': subinstr local cmdline_`k' "CONTROLVARS"  "`controls_touse'"
+						* Baseline regression (note: WEIGHTVAR substitution here is an undocumented feature; WEIGHTVAR is numbered from i=1...num_outcomes)
+						local cmdline_`k': subinstr local cmd         "OUTCOMEVAR" "`outcomevar_`k''", word
+						local cmdline_`k': subinstr local cmdline_`k' "WEIGHTVAR"  "`weightvar_`i''"
+						local cmdline_`k': subinstr local cmdline_`k' "CONTROLVARS"  "`controls_`k''"
 						
 						* Subgroup option: insert an if clause in front of the comma (if present)
 						if "`subgroup'"!="" {

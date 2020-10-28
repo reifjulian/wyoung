@@ -9,17 +9,6 @@ set more off
 set tracedepth 1
 * set trace on
 
-
-* Control var example
-sysuse auto, clear
-wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" "gear_ratio") bootstraps(50) seed(20) replace
-cf _all using "compare/controlvars.dta"
-
-sysuse auto, clear
-wyoung, cmd(`" `""regress mpg displacement length weight""' `""regress headroom displacement length weight""' `""regress mpg displacement gear_ratio""' `""regress headroom displacement gear_ratio""' "') familyp(displacement) bootstraps(50) seed(20) replace
-cf _all using "compare/controlvars.dta"
-
-
 *********************************************
 * Example 1
 *********************************************
@@ -148,6 +137,21 @@ assert _rc==198
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length, cluster(turn)") familyp(displacement) bootstraps(100) seed(20) replace cluster(turn)
 cf outcome familyp pwyoung using "compare/examp_cluster.dta"
+
+
+* Control var examples
+sysuse auto, clear
+wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" "gear_ratio") bootstraps(50) seed(20) replace
+cf _all using "compare/controlvars.dta"
+
+sysuse auto, clear
+wyoung, cmd(`" `""regress mpg displacement length weight""' `""regress headroom displacement length weight""' `""regress mpg displacement gear_ratio""' `""regress headroom displacement gear_ratio""' "') familyp(displacement) bootstraps(50) seed(20) replace
+cf _all using "compare/controlvars.dta"
+
+* Undocumented weights() option 
+use "compare/wellness.dta", clear
+wyoung spend_0715_0716 spendOff_0715_0716 spendHosp_0715_0716 spendRx_0715_0716 nonzero_spend_0715_0716, familyp(hra_c_yr1) bootstraps(100) seed(11) cmd("_regress OUTCOMEVAR hra_c_yr1 [aw=WEIGHTVAR], robust") weights(covg_0715_0716 covg_0715_0716 covg_0715_0716 covg_0715_0716 constant) replace
+cf _all using "compare/wellness_wy.dta"
 
 ***
 * Missing data examples

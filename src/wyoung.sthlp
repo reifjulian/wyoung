@@ -75,7 +75,6 @@ This option is only available when employing Syntax 1.
 This option is only available when employing Syntax 1. The control variables are indicated in {it:model} by "CONTROLVARS" (uppder case).
 {cmd:wyoung} will estimate multiple specifications by substituting each varlist into "CONTROLVARS".
 
-
 {p 4 8 2}
 {cmd:singlestep} computes the single-step adjusted {it:p}-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their
 step-down counterparts also control the type III error rate is unknown (Westfall and Young 1993, p. 51).
