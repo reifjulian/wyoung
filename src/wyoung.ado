@@ -1,4 +1,5 @@
-*! wyoung 1.2 3aug2020 by Julian Reif
+*! wyoung 1.3 29oct2020 by Julian Reif
+* 1.3: controls option added
 * 1.2: familyp option now supports multiple variables. subgroup option added
 * 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
 * 1.0.5: familyp option now supports factor variables and time-series operators
@@ -11,19 +12,19 @@
 * Notation
 ***
 
-* K = number of hypotheses = num subgroups X num familyp X num outcomes
+* K = number of hypotheses = num subgroups X num familyp X num outcomes X num controls
 * N = number of bootstraps
 
 program define wyoung, rclass
 
 	version 12
 
-	* Syntax 1: one model with multiple outcomes 
-	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) test(string) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) force detail SINGLEstep familypexp replace]
+	* Syntax 1: one model with multiple outcomes (and possibly multiple controls and subgroups)
+	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) force detail SINGLEstep familypexp replace]
 	
 	local outcome_vars "`varlist'"
 	
-	* Syntax 2: different models with multiple outcomes 
+	* Syntax 2: different models
 	if "`outcome_vars'"=="" {
 	
 		* Perform a full trim to remove leading and trailing spaces from the cmd() option
@@ -32,7 +33,7 @@ program define wyoung, rclass
 		* If user did NOT use compound double quotes in cmd(), pass through the string asis. This ensures the -tokenize- command below works properly.
 		mata: if( substr(st_local("cmd"),1,1)!=char(96) ) stata("syntax, cmd(string asis) *");;
 	}
-	
+		
 	local user_cmd "wyoung `0'"
 	
 	tempfile bs
@@ -105,7 +106,45 @@ program define wyoung, rclass
 		local num_subgroups : word count `subgroup_vals'
 	}
 	
+	* Controls option
+	local num_sets_controls = 1
+	qui if `"`controls'"'!="" {
+		
+		if mi("`outcome_vars'") {
+			di as error "controls() option not allowed when employing Syntax 2 of wyoung"
+			exit 198
+		}
+		
+		if !strpos("`cmd'"," CONTROLVARS") {
+			di as error "did not specify {it:CONTROLVARS} in option {cmd:cmd()}"
+			exit 198
+		}		
+		
+		* Split out the different control sets
+		tokenize `"`controls'"'
 
+		local k = 0
+		while `"`1'"' != "" {
+			local k = `k'+1
+
+			* Perform a full trim to remove leading and trailing spaces
+			mata: st_local("1",strtrim(st_local("1")))
+			
+			confirm variable `1'
+
+			local controlvars_`k' `"`1'"'
+			macro shift
+		}
+		
+		local num_sets_controls = `k'		
+	}
+	
+	if strpos(`"`cmd'"'," CONTROLVARS") & `"`controls'"'=="" {
+		di as error "cannot have {it:CONTROLVARS} without specifying option {cmd:controls()}"
+		exit 198		
+	}
+	
+	
 	******
 	* Syntax 1: user specifies varlist that will replace "OUTCOMEVAR"
 	******
@@ -126,7 +165,8 @@ program define wyoung, rclass
 			exit 198
 		}
 		
-		* If weights are specified, ensure there is one weight variable for each regression
+		* If weights are specified, ensure there is exactly one weight variable for each outcome
+		* Note: this option is undocumented
 		if "`weights'"!="" {
 			
 			local num_weightvars : word count `weights'
@@ -141,8 +181,8 @@ program define wyoung, rclass
 			}
 		}
 
-		* K = number of hypotheses = num_subgroups X num_outcomes X num_familypvars
-		local K = `num_subgroups' * `num_familypvars' * `num_outcomes'
+		* K = number of hypotheses = subgroups X outcomes X family pvars X control sets
+		local K = `num_subgroups' * `num_familypvars' * `num_outcomes' * `num_sets_controls'
 		
 		* For each hypothesis k=1...K, define the outcome, familyp, and regression command
 		local k = 1
@@ -161,34 +201,40 @@ program define wyoung, rclass
 					local familyp_touse "``f''"
 				}
 				
-				forval i = 1/`num_outcomes' {
-
-					tokenize `outcome_vars'
-					local y ``i''
-					local outcomevar_`k' "`y'"
-					local familyp_`k' "`familyp_touse'"
-					local subgroup_`k' "`subgroup_touse'"
+				forval c = 1/`num_sets_controls' {
 					
-					* Baseline regression
-					local tmp_`k':     subinstr local cmd     "OUTCOMEVAR" "`y'", word
-					local cmdline_`k': subinstr local tmp_`i' "WEIGHTVAR"  "`weightvar_`i''"
+					local controls_touse "`controlvars_`c''"
 					
-					* Subgroup option: insert an if clause in front of the comma (if present)
-					if "`subgroup'"!="" {
-						local tmp `"`cmdline_`k''"'
-						local index_comma = strpos(`"`tmp'"', ",")
-						if `index_comma'==0 {
-							local cmd_part1 `"`tmp'"'
-						}
-						else {
-							mata: st_local("cmd_part1", substr(st_local("tmp"), 1, strpos(st_local("tmp"), ",")-1))
-							mata: st_local("cmd_part2", substr(st_local("tmp"), strpos(st_local("tmp"), ","), .))
+					forval i = 1/`num_outcomes' {
+
+						tokenize `outcome_vars'
+						local outcomevar_`k' "``i''"
+						local familyp_`k' "`familyp_touse'"
+						local subgroup_`k' "`subgroup_touse'"
+						local controls_`k' "`controls_touse'"
+						
+						* Baseline regression (note: WEIGHTVAR substitution here is an undocumented feature; WEIGHTVAR is numbered from i=1...num_outcomes)
+						local cmdline_`k': subinstr local cmd         "OUTCOMEVAR" "`outcomevar_`k''", word
+						local cmdline_`k': subinstr local cmdline_`k' "WEIGHTVAR"  "`weightvar_`i''"
+						local cmdline_`k': subinstr local cmdline_`k' "CONTROLVARS"  "`controls_`k''"
+						
+						* Subgroup option: insert an if clause in front of the comma (if present)
+						if "`subgroup'"!="" {
+							local tmp `"`cmdline_`k''"'
+							local index_comma = strpos(`"`tmp'"', ",")
+							if `index_comma'==0 {
+								local cmd_part1 `"`tmp'"'
+							}
+							else {
+								mata: st_local("cmd_part1", substr(st_local("tmp"), 1, strpos(st_local("tmp"), ",")-1))
+								mata: st_local("cmd_part2", substr(st_local("tmp"), strpos(st_local("tmp"), ","), .))
+							}
+
+							local cmdline_`k' `"`cmd_part1' if `subgroup'==`subgroup_touse'`cmd_part2'"'
 						}
 
-						local cmdline_`k' `"`cmd_part1' if `subgroup'==`subgroup_touse'`cmd_part2'"'
+						local k = `k'+1
 					}
-
-					local k = `k'+1
 				}
 			}
 		}
@@ -261,9 +307,10 @@ program define wyoung, rclass
 
 	qui forval k = 1/`K' {
 
-		if "`subgroup'"!="" & mod(`k',`num_familypvars'*`num_outcomes')==1 noi di as text _n "subgroup: " as result `"`subgroup_`k''"'
-		else if (`num_outcomes'==0 | mod(`k',`num_outcomes')==1) noi di as text ""
-		if `num_outcomes'==0 | mod(`k',`num_outcomes')==1 noi di as text "familyp: " as result `"`familyp_`k''"'
+		if "`subgroup'"!="" & mod(`k',`num_outcomes')==1                         noi di as text _n "subgroup: " as result `"`subgroup_`k''"'
+		else if (`num_outcomes'==0 | mod(`k',`num_outcomes')==1)                 noi di as text ""
+		if `num_outcomes'==0 | mod(`k',`num_outcomes')==1                        noi di as text "familyp: " as result `"`familyp_`k''"'
+		if `"`controls'"'!="" & (`num_outcomes'==0 | mod(`k',`num_outcomes')==1) noi di as text "controls: " as result `"`controls_`k''"'
 		
 		noi di in yellow _skip(4) `"`cmdline_`k''"'
 	
@@ -272,7 +319,7 @@ program define wyoung, rclass
 		* Run regression k
 		cap `cmdline_`k''
 		if _rc {
-			noi di as error "The following error occurred when running the command " as result `"`cmdline_`k''"' as error ":"
+			noi di as error "The following error occurred when running the command " as result `"`cmdline_`k'':"'
 			error _rc
 		}
 		local N_`k' = e(N)
@@ -304,7 +351,7 @@ program define wyoung, rclass
 			}
 		}
 		else {
-			noi di as error "The following error occurred when running the command " as result `"lincom `familyp_`k''"' as error ":"
+			noi di as error "The following error occurred when running the command " as result `"lincom `familyp_`k'':"'
 			lincom `familyp_`k''
 		}
 		
@@ -444,6 +491,7 @@ program define wyoung, rclass
 	qui gen double p = .
 	qui gen familyp = ""
 	if !mi("`subgroup'") qui gen subgroup = .
+	if !mi(`"`controls'"') qui gen controls = ""
 	if !mi("`detail'") qui gen N = .
 
 	qui forval k = 1/`K' {
@@ -453,8 +501,9 @@ program define wyoung, rclass
 		replace stderr = `stderr_`k''          if k==`k'
 		replace p  = `p_`k''                   if k==`k'
 		replace familyp = "`familyp_`k''"      if k==`k'
-		if !mi("`subgroup'") replace subgroup = `subgroup_`k'' if k==`k'
-		if !mi("`detail'") replace N = `N_`k'' if k==`k'
+		if !mi("`subgroup'")   replace subgroup = `subgroup_`k''   if k==`k'
+		if !mi(`"`controls'"') replace controls = "`controls_`k''" if k==`k'
+		if !mi("`detail'")     replace N        = `N_`k''          if k==`k'
 	}	
 	
 	* Step 5. Enforce monotonicity using successive maximization.  Include k in the sort to break ties.
@@ -474,6 +523,7 @@ program define wyoung, rclass
 	
 	if !mi("`detail'") local Ns "N Navg Nmin Nmax"
 	if !mi("`subgroup'") local subgroup subgroup
+	if !mi(`"`controls'"') local controls controls
 	
 	label var pbonf "Bonferroni-Holm p-value"
 	label var psidak "Sidak-Holm p-value"
@@ -502,7 +552,7 @@ program define wyoung, rclass
 	
 	sort k
 	drop `j'
-	order k model outcome familyp `subgroup' coef stderr p `Ns'
+	order k model outcome `controls' familyp `subgroup' coef stderr p `Ns'
 	list
 	
 	mkmat coef stderr p*, matrix(`mat')

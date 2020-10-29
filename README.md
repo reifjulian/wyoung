@@ -1,19 +1,19 @@
 # WYOUNG: control the family-wise error rate when performing multiple hypothesis tests
 
-- Current version: `1.2 3aug2020`
+- Current version: `1.3 29oct2020`
 - Jump to: [`overview`](#overview) [`installation`](#installation) [`examples`](#examples) [`update history`](#update-history) [`citation`](#citation) 
 
 -----------
 
 ## Overview: 
 
-`wyoung` is a [Stata](http://www.stata.com) command that calculates adjusted *p*-values using the free step-down resampling methodology of Westfall and Young (1993). It also computes the Bonferroni-Holm and Sidak-Holm adjusted *p*-values. Algorithm details and simulation test results are documented [here](/documentation/wyoung.pdf).
+`wyoung` is a Stata command that calculates adjusted *p*-values using the free step-down resampling methodology of Westfall and Young (1993). It also computes the Bonferroni-Holm and Sidak-Holm adjusted *p*-values. Algorithm details and simulation test results are documented [here](/documentation/wyoung.pdf).
 
 This command was developed as part of the [Illinois Workplace Wellness Study](https://www.nber.org/workplacewellness/).
 
 ## Installation:
 
-Type `which wyoung` at the Stata prompt to determine your `wyoung` version. To install the most recent version, copy and paste the following line of code:
+Type `which wyoung` at the Stata prompt to determine your current version number. To install the most recent version, copy and paste the following line of code:
 
 ```stata
 net install wyoung, from("https://raw.githubusercontent.com/reifjulian/wyoung/master") replace
@@ -40,7 +40,8 @@ For each regression, the output reports unadjusted and adjusted *p*-values for t
 ```stata
 sysuse auto.dta, clear
 set seed 20
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign) bootstraps(100)
+local yvars "mpg headroom turn"
+wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign) boot(100)
 ```
 ![Example 2](images/example_subgroup.PNG)
 
@@ -48,22 +49,36 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(di
 ```stata
 sysuse auto.dta, clear
 set seed 20
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign) bootstraps(100)
+local yvars "mpg headroom turn"
+wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign) boot(100)
 ```
 ![Example 3](images/example_subgroup_manytreat.PNG)
 
-*Example 4.* Estimate a model for three outcomes and test the linear restriction `_b[length] + 50*_b[displacement] = 0` (3 hypotheses).
+*Example 4.* Estimate a model for three outcomes, for three different sets of controls, and calculate adjusted *p*-values for `length` (3 X 3 = 9 hypotheses).
+```stata
+sysuse auto.dta, clear
+set seed 20
+local yvars "mpg headroom turn"
+wyoung `yvars', cmd(reg OUTCOMEVAR length CONTROLVARS) controls("trunk" "weight" "trunk weight") familyp(length) boot(100)
+```
+![Example 4](images/example_manycontrols.PNG)
+
+*Example 5.* Estimate a model for three outcomes and test the linear restriction `_b[length] + 50*_b[displacement] = 0` (3 hypotheses).
 
 ```stata
 sysuse auto.dta, clear
 set seed 20
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp bootstraps(100)
+local yvars "mpg headroom turn"
+wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp boot(100)
 ```
-![Example 4](images/example_lincom.PNG)
+![Example 5](images/example_lincom.PNG)
 
 ## Update History:
+* **1.3**
+  - `controls()` option added
+
 * **1.2**
-  - `familyp()` option now supports multiple variables. `subgroup` option added
+  - `familyp()` option now supports multiple variables. `subgroup()` option added
 
 * **1.1**
   - `familyp()` option now supports the testing of linear and nonlinear combinations of parameters
