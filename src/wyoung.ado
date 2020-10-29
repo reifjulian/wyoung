@@ -1,4 +1,4 @@
-*! wyoung 1.3 28oct2020 by Julian Reif
+*! wyoung 1.3 29oct2020 by Julian Reif
 * 1.3: controls option added
 * 1.2: familyp option now supports multiple variables. subgroup option added
 * 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
@@ -307,9 +307,10 @@ program define wyoung, rclass
 
 	qui forval k = 1/`K' {
 
-		if "`subgroup'"!="" & mod(`k',`num_familypvars'*`num_outcomes')==1 noi di as text _n "subgroup: " as result `"`subgroup_`k''"'
-		else if (`num_outcomes'==0 | mod(`k',`num_outcomes')==1) noi di as text ""
-		if `num_outcomes'==0 | mod(`k',`num_outcomes')==1 noi di as text "familyp: " as result `"`familyp_`k''"'
+		if "`subgroup'"!="" & mod(`k',`num_outcomes')==1                         noi di as text _n "subgroup: " as result `"`subgroup_`k''"'
+		else if (`num_outcomes'==0 | mod(`k',`num_outcomes')==1)                 noi di as text ""
+		if `num_outcomes'==0 | mod(`k',`num_outcomes')==1                        noi di as text "familyp: " as result `"`familyp_`k''"'
+		if `"`controls'"'!="" & (`num_outcomes'==0 | mod(`k',`num_outcomes')==1) noi di as text "controls: " as result `"`controls_`k''"'
 		
 		noi di in yellow _skip(4) `"`cmdline_`k''"'
 	

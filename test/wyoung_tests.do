@@ -9,6 +9,7 @@ set more off
 set tracedepth 1
 * set trace on
 
+
 *********************************************
 * Example 1
 *********************************************
@@ -137,7 +138,6 @@ assert _rc==198
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length, cluster(turn)") familyp(displacement) bootstraps(100) seed(20) replace cluster(turn)
 cf outcome familyp pwyoung using "compare/examp_cluster.dta"
-
 
 * Control var examples
 sysuse auto, clear
