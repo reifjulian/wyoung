@@ -40,7 +40,8 @@ For each regression, the output reports unadjusted and adjusted *p*-values for t
 ```stata
 sysuse auto.dta, clear
 set seed 20
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign) bootstraps(100)
+local yvars "mpg headroom turn"
+wyoung `yvars', cmd(regress OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign) bootstraps(100)
 ```
 ![Example 2](images/example_subgroup.PNG)
 
@@ -48,7 +49,8 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(di
 ```stata
 sysuse auto.dta, clear
 set seed 20
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign) bootstraps(100)
+local yvars "mpg headroom turn"
+wyoung `yvars', cmd(regress OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign) bootstraps(100)
 ```
 ![Example 3](images/example_subgroup_manytreat.PNG)
 
@@ -56,7 +58,8 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(di
 ```stata
 sysuse auto.dta, clear
 set seed 20
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR price length CONTROLVARS) controls("trunk" "weight") familyp(price length) subgroup(foreign) bootstraps(100)
+local yvars "mpg headroom turn"
+wyoung `yvars', cmd(regress OUTCOMEVAR price length CONTROLVARS) controls("trunk" "weight") familyp(price length) subgroup(foreign) bootstraps(100)
 ```
 [Output omitted]
 
@@ -65,7 +68,8 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR price length CONTROLVARS) contr
 ```stata
 sysuse auto.dta, clear
 set seed 20
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp bootstraps(100)
+local yvars "mpg headroom turn"
+wyoung `yvars', cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp bootstraps(100)
 ```
 ![Example 5](images/example_lincom.PNG)
 
