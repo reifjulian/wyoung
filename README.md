@@ -56,9 +56,9 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(di
 ```stata
 sysuse auto.dta, clear
 set seed 20
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length CONTROLVARS) controls("trunk" "weight") familyp(displacement length) subgroup(foreign) bootstraps(100)
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR price length CONTROLVARS) controls("trunk" "weight") familyp(price length) subgroup(foreign) bootstraps(100)
 ```
-(Output omitted)
+[Output omitted]
 
 *Example 5.* Estimate a model for three outcomes and test the linear restriction `_b[length] + 50*_b[displacement] = 0` (3 hypotheses).
 
