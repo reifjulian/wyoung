@@ -71,9 +71,10 @@ By default, specifying {cmd:subgroup()} will cause {cmd:wyoung} to select bootst
 This option is only available when employing Syntax 1.
 
 {p 4 8 2}
-{cmd:controls(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} instructs {cmd:wyoung} to estimate the model separately for each set of controls. 
-This option is only available when employing Syntax 1. The control variables are indicated in {it:model} by "CONTROLVARS" (uppder case).
-{cmd:wyoung} will estimate multiple specifications by substituting each varlist into "CONTROLVARS".
+{cmd:controls(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} instructs {cmd:wyoung} to estimate the model separately 
+for different sets of controls. 
+This option is only available when employing Syntax 1. The control variables are indicated in {it:model} by "CONTROLVARS" (upper case).
+{cmd:wyoung} will estimate multiple specifications by substituting into "CONTROLVARS" each {it:varlist} specified by the user.
 
 {p 4 8 2}
 {cmd:singlestep} computes the single-step adjusted {it:p}-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their
@@ -172,6 +173,10 @@ sizes across bootstraps.
 {p 4 4 2}6. Test the linear restriction {it:_b[length] + 50*_b[displacement] = 0} (3 hypotheses).
 
 {col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp bootstraps(100) seed(20)}}
+
+{p 4 4 2}7. Estimate models separately for different sets of controls (3 hypotheses).
+
+{col 8}{cmd:. {stata wyoung mpg, cmd(regress OUTCOMEVAR displacement CONTROLVARS) familyp(displacement) controls("headroom" "turn" "headroom turn") bootstraps(100) seed(20)}}
 
 
 {title:Stored results}
