@@ -60,6 +60,7 @@ If only one {it:varname} is specified, {cmd:wyoung} applies it to all {it:model}
 {p 4 8 2}
 {cmd:cluster(}{help varlist:varlist}{cmd:)} specifies variables identifying clusters.  
 If {cmd:cluster()} is specified, the sample drawn during each replication is a bootstrap sample of clusters.
+This option is required if {it:model} includes clustered standard errors, unless {cmd:force} is specified.
 
 {p 4 8 2}
 {cmd:force} allows the user to include a model with clustered standard errors without also specifying the {cmd:cluster()} bootstrap option.
