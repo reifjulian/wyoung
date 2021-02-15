@@ -141,7 +141,7 @@ cf outcome familyp pwyoung using "compare/examp_cluster.dta"
 
 * Control var examples
 sysuse auto, clear
-wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" "gear_ratio") bootstraps(50) seed(20) replace
+wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controlsinteract("length weight" "gear_ratio") bootstraps(50) seed(20) replace
 cf _all using "compare/controlvars.dta"
 
 sysuse auto, clear
@@ -286,56 +286,67 @@ cf _all using "compare/subgroup2.dta"
 *********************************************
 sysuse auto.dta, clear
 set seed 20
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100)
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100) replace
 cf _all using "compare/gh_example1.dta"
 
 sysuse auto.dta, clear
 set seed 20
 local yvars "mpg headroom turn"
-wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign) boot(100)
+wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign) boot(100) replace
 cf _all using "compare/gh_example2.dta"
 
 sysuse auto.dta, clear
 set seed 20
 local yvars "mpg headroom turn"
-wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign) boot(100)
+wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign) boot(100) replace
 cf _all using "compare/gh_example3.dta"
 
 sysuse auto.dta, clear
 set seed 20
 local yvars "mpg headroom turn"
-wyoung `yvars', cmd(reg OUTCOMEVAR length CONTROLVARS) controls("trunk" "weight" "trunk weight") familyp(length) boot(100)
+wyoung `yvars', cmd(reg OUTCOMEVAR length CONTROLVARS) controlsinteract("trunk" "weight" "trunk weight") familyp(length) boot(100) replace
 cf _all using "compare/gh_example4.dta"
 
 sysuse auto.dta, clear
 set seed 20
 local yvars "mpg headroom turn"
-wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp boot(100)
+wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp boot(100) replace
 cf _all using "compare/gh_example5.dta"
 
 *********************************************
 * help file examples
 *********************************************
 sysuse auto.dta, clear
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100) seed(20)
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100) seed(20) replace
 cf _all using "compare/hf_example1.dta"
 
-wyoung, cmd("regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length") familyp(displacement) bootstraps(100) seed(20)
+sysuse auto.dta, clear
+wyoung, cmd("regress mpg displacement length" "regress headroom displacement length" "regress turn displacement length") familyp(displacement) bootstraps(100) seed(20)  replace
 cf _all using "compare/hf_example2.dta"
  
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement) bootstraps(100) seed(20)
-cf _all using "compare/hf_example3.dta"
-  
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign) bootstraps(100) seed(20)
+sysuse auto.dta, clear
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement) bootstraps(100) seed(20) replace
+keep k p*
+ren p* newp*
+merge 1:1 k using "compare/hf_example3.dta", assert(match) nogenerate
+foreach v of varlist p* {
+	assert abs(`v' - new`v')<0.000001
+}
+
+sysuse auto.dta, clear  
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign) bootstraps(100) seed(20) replace
 cf _all using "compare/hf_example4.dta"
   
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign) bootstraps(100) seed(20)
+sysuse auto.dta, clear
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign) bootstraps(100) seed(20) replace
 cf _all using "compare/hf_example5.dta"
 
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp bootstraps(100) seed(20)
+sysuse auto.dta, clear
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp bootstraps(100) seed(20) replace
 cf _all using "compare/hf_example6.dta"
   
-wyoung mpg, cmd(regress OUTCOMEVAR displacement CONTROLVARS) familyp(displacement) controls("headroom" "turn" "headroom turn") bootstraps(100) seed(20)
+sysuse auto.dta, clear
+wyoung mpg, cmd(regress OUTCOMEVAR displacement CONTROLVARS) familyp(displacement) controlsinteract("headroom" "turn" "headroom turn") bootstraps(100) seed(20) replace
 cf _all using "compare/hf_example7.dta"
 
 ******************************************************************************************************************************************
