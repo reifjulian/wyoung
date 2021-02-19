@@ -139,14 +139,23 @@ sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length, cluster(turn)") familyp(displacement) bootstraps(100) seed(20) replace cluster(turn)
 cf outcome familyp pwyoung using "compare/examp_cluster.dta"
 
-* Control var examples
+* Controlsinteract examples
 sysuse auto, clear
 wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controlsinteract("length weight" "gear_ratio") bootstraps(50) seed(20) replace
-cf _all using "compare/controlvars.dta"
+cf _all using "compare/controlsinteract.dta"
 
 sysuse auto, clear
 wyoung, cmd(`" `""regress mpg displacement length weight""' `""regress headroom displacement length weight""' `""regress mpg displacement gear_ratio""' `""regress headroom displacement gear_ratio""' "') familyp(displacement) bootstraps(50) seed(20) replace
-cf _all using "compare/controlvars.dta"
+cf _all using "compare/controlsinteract.dta"
+
+* Control var examples
+sysuse auto, clear
+wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" "gear_ratio") bootstraps(50) seed(20) replace
+cf _all using "compare/controls.dta"
+
+sysuse auto, clear
+wyoung, cmd(`" `""regress mpg displacement length weight""' `""regress headroom displacement gear_ratio""' "') familyp(displacement) bootstraps(50) seed(20) replace
+cf _all using "compare/controls.dta"
 
 * Undocumented weights() option 
 use "compare/wellness.dta", clear
