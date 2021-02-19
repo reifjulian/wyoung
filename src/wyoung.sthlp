@@ -72,10 +72,17 @@ By default, specifying {cmd:subgroup()} will cause {cmd:wyoung} to select bootst
 This option is only available when employing Syntax 1.
 
 {p 4 8 2}
-{cmd:controls(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} instructs {cmd:wyoung} to estimate the model separately 
-for different sets of controls. 
+{cmd:controls(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} lets you specify different controls for each outcome.
 This option is only available when employing Syntax 1. The control variables are indicated in {it:model} by "CONTROLVARS" (upper case).
-{cmd:wyoung} will estimate multiple specifications by substituting into "CONTROLVARS" each {it:varlist} specified by the user.
+For the first outcome variable, {cmd:wyoung} will substitute {it:varlist1} into "CONTROLVARS", for the second outcome it will
+substitute {it:varlist2}, and so on.
+
+{p 4 8 2}
+{cmd:controlsinteract(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} is a variation on {cmd:controls()} that 
+will estimate the model separately for all pairwise combinations of outcome variables and specified controls.
+Each set of controls will be substituted into "CONTROLVARS" as specified in {it:model}.
+Specifying {it:N} different sets of controls ({it:varlist1}, {it:varlist2}, ..., {it:varlistN}) will multiply 
+the number of hypotheses being tested by {it:N}.
 
 {p 4 8 2}
 {cmd:singlestep} computes the single-step adjusted {it:p}-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their
