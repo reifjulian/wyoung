@@ -62,7 +62,7 @@ set seed 20
 local yvars "mpg headroom turn"
 wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp boot(100)
 ```
-![Example 5](images/example_lincom.PNG)
+![Example 4](images/example_lincom.PNG)
 
 ## Update History:
 * **1.3.1**
