@@ -182,10 +182,21 @@ sizes across bootstraps.
 
 {col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp bootstraps(100) seed(20)}}
 
-{p 4 4 2}7. Estimate models separately for different sets of controls (3 hypotheses).
+{p 4 4 2}7. Estimate a model that uses different controls for two different outcomes (2 hypotheses).
 
-{col 8}{cmd:. {stata wyoung mpg, cmd(regress OUTCOMEVAR displacement CONTROLVARS) familyp(displacement) controls("headroom" "turn" "headroom turn") bootstraps(100) seed(20)}}
+{col 8}Syntax 1:
+{col 8}{cmd:. {stata wyoung mpg rep78, cmd(regress OUTCOMEVAR displacement CONTROLVARS) familyp(displacement) controls("headroom" "turn") bootstraps(100) seed(20)}}
 
+{col 8}Syntax 2:
+{col 8}{cmd:. {stata wyoung, cmd("regress mpg displacement headroom" "regress rep78 displacement turn") familyp(displacement) bootstraps(100) seed(20)}}
+
+{p 4 4 2}8. Estimate a model that interacts two different sets of controls with two different outcomes (4 hypotheses).
+
+{col 8}Syntax 1:
+{col 8}{cmd:. {stata wyoung mpg rep78, cmd(regress OUTCOMEVAR displacement CONTROLVARS) familyp(displacement) controlsinteract("headroom" "turn") bootstraps(100) seed(20)}}
+
+{col 8}Syntax 2:
+{col 8}{cmd:. {stata wyoung, cmd("regress mpg displacement headroom" "regress rep78 displacement headroom" "regress mpg displacement turn"  "regress rep78 displacement turn") familyp(displacement) bootstraps(100) seed(20)}}
 
 {title:Stored results}
 
