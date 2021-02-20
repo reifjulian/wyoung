@@ -1,6 +1,6 @@
 # WYOUNG: control the family-wise error rate when performing multiple hypothesis tests
 
-- Current version: `1.3 29oct2020`
+- Current version: `1.3.1 20feb2021`
 - Jump to: [`overview`](#overview) [`installation`](#installation) [`examples`](#examples) [`update history`](#update-history) [`citation`](#citation) 
 
 -----------
@@ -54,16 +54,7 @@ wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement len
 ```
 ![Example 3](images/example_subgroup_manytreat.PNG)
 
-*Example 4.* Estimate a model for three outcomes, for three different sets of controls, and calculate adjusted *p*-values for `length` (3 X 3 = 9 hypotheses).
-```stata
-sysuse auto.dta, clear
-set seed 20
-local yvars "mpg headroom turn"
-wyoung `yvars', cmd(reg OUTCOMEVAR length CONTROLVARS) controls("trunk" "weight" "trunk weight") familyp(length) boot(100)
-```
-![Example 4](images/example_manycontrols.PNG)
-
-*Example 5.* Estimate a model for three outcomes and test the linear restriction `_b[length] + 50*_b[displacement] = 0` (3 hypotheses).
+*Example 4.* Estimate a model for three outcomes and test the linear restriction `_b[length] + 50*_b[displacement] = 0` (3 hypotheses).
 
 ```stata
 sysuse auto.dta, clear
@@ -74,6 +65,9 @@ wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displa
 ![Example 5](images/example_lincom.PNG)
 
 ## Update History:
+* **1.3.1**
+  - `controls()` option edited; previous functionality moved to `controlsinteract()`
+
 * **1.3**
   - `controls()` option added
 

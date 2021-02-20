@@ -148,6 +148,12 @@ sysuse auto, clear
 wyoung, cmd(`" `""regress mpg displacement length weight""' `""regress headroom displacement length weight""' `""regress mpg displacement gear_ratio""' `""regress headroom displacement gear_ratio""' "') familyp(displacement) bootstraps(50) seed(20) replace
 cf _all using "compare/controlsinteract.dta"
 
+sysuse auto.dta, clear
+set seed 20
+local yvars "mpg headroom turn"
+wyoung `yvars', cmd(reg OUTCOMEVAR length CONTROLVARS) controlsinteract("trunk" "weight" "trunk weight") familyp(length) boot(100) replace
+cf _all using "compare/controlsinteract2.dta"
+
 * Control var examples
 sysuse auto, clear
 wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" "gear_ratio") bootstraps(50) seed(20) replace
@@ -156,6 +162,32 @@ cf _all using "compare/controls.dta"
 sysuse auto, clear
 wyoung, cmd(`" `""regress mpg displacement length weight""' `""regress headroom displacement gear_ratio""' "') familyp(displacement) bootstraps(50) seed(20) replace
 cf _all using "compare/controls.dta"
+
+webuse abdata, clear
+gen lag_w = L.w
+gen lag_k = L.k
+gen lag_ys = L.ys
+wyoung w k ys, cmd("regress OUTCOMEVAR yr1980 CONTROLVARS") familyp(yr1980) controls(lag_w lag_k lag_ys) bootstraps(50) seed(20) replace
+cf _all using "compare/controls2.dta"
+
+webuse abdata, clear
+gen lag_w = L.w
+gen lag_k = L.k
+gen lag_ys = L.ys
+wyoung, cmd(`" `""regress w yr1980 lag_w""' `""regress k yr1980 lag_k""' `""regress ys yr1980 lag_ys""' "') familyp(yr1980) bootstraps(50) seed(20) replace
+cf _all using "compare/controls2.dta"
+
+sysuse auto, clear
+wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" gear_ratio) bootstraps(50) seed(20) replace
+cf _all using "compare/controls.dta"
+
+sysuse auto, clear
+rcof noi wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" gear_ratio price) bootstraps(50) seed(20) replace
+assert _rc==198
+rcof noi wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight") bootstraps(50) seed(20) replace
+assert _rc==198
+rcof noi wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" Lweight) bootstraps(50) seed(20) replace
+assert _rc==111
 
 * Undocumented weights() option 
 use "compare/wellness.dta", clear
@@ -313,14 +345,8 @@ cf _all using "compare/gh_example3.dta"
 sysuse auto.dta, clear
 set seed 20
 local yvars "mpg headroom turn"
-wyoung `yvars', cmd(reg OUTCOMEVAR length CONTROLVARS) controlsinteract("trunk" "weight" "trunk weight") familyp(length) boot(100) replace
-cf _all using "compare/gh_example4.dta"
-
-sysuse auto.dta, clear
-set seed 20
-local yvars "mpg headroom turn"
 wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp boot(100) replace
-cf _all using "compare/gh_example5.dta"
+cf _all using "compare/gh_example4.dta"
 
 *********************************************
 * help file examples

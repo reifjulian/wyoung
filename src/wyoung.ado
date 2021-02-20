@@ -1,4 +1,4 @@
-*! wyoung 1.3.1 19feb2021 by Julian Reif
+*! wyoung 1.3.1 20feb2021 by Julian Reif
 * 1.3.1: new controls option functionality. Old functionality moved to controlsinteract
 * 1.3: controls option added
 * 1.2: familyp option now supports multiple variables. subgroup option added
@@ -145,7 +145,7 @@ program define wyoung, rclass
 		
 		local num_sets_controls = `k'		
 	}
-	
+
 	* Controls option (simple 1:1 substitution, no increase in number of hypotheses)	
 	qui if `"`controls'"'!="" {
 		
@@ -179,8 +179,7 @@ program define wyoung, rclass
 			di as error "Number of varlists in controls() option does not equal the number of outcomes"
 			exit 198
 		}
-	}	
-	
+	}		
 	
 	******
 	* Syntax 1: user specifies varlist that will replace "OUTCOMEVAR"
@@ -357,11 +356,8 @@ program define wyoung, rclass
 		tempname p_`k' ystar_`k'
 
 		* Run regression k
-		cap `cmdline_`k''
-		if _rc {
-			noi di as error "The following error occurred when running the command " as result `"`cmdline_`k'':"'
-			error _rc
-		}
+		`cmdline_`k''
+		
 		local N_`k' = e(N)
 		if "`e(vce)'"=="cluster" local vce_cluster 1
 		if !mi("`e(depvar)'") local outcomevar_`k' "`e(depvar)'"
