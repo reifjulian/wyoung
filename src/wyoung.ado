@@ -1,4 +1,5 @@
-*! wyoung 1.3 29oct2020 by Julian Reif
+*! wyoung 1.3.1 20feb2021 by Julian Reif
+* 1.3.1: new controls option functionality. Old functionality moved to controlsinteract
 * 1.3: controls option added
 * 1.2: familyp option now supports multiple variables. subgroup option added
 * 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
@@ -20,7 +21,7 @@ program define wyoung, rclass
 	version 12
 
 	* Syntax 1: one model with multiple outcomes (and possibly multiple controls and subgroups)
-	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) force detail SINGLEstep familypexp replace]
+	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp replace]
 	
 	local outcome_vars "`varlist'"
 	
@@ -106,8 +107,46 @@ program define wyoung, rclass
 		local num_subgroups : word count `subgroup_vals'
 	}
 	
-	* Controls option
+	* CONTROLVARS needs to be specified with either controls() or controlsinteract()
+	if strpos(`"`cmd'"'," CONTROLVARS") & (`"`controlsinteract'"'=="" & `"`controls'"'=="") {
+		di as error "cannot have {it:CONTROLVARS} without specifying option {cmd:controls()} or {cmd:controlsinteract()}"
+		exit 198		
+	}	
+	
+	* Controlsinteract option (multiplies number of hypotheses being tested)
 	local num_sets_controls = 1
+	qui if `"`controlsinteract'"'!="" {
+		
+		if mi("`outcome_vars'") {
+			di as error "controlsinteract() option not allowed when employing Syntax 2 of wyoung"
+			exit 198
+		}
+		
+		if !strpos("`cmd'"," CONTROLVARS") {
+			di as error "did not specify {it:CONTROLVARS} in option {cmd:cmd()}"
+			exit 198
+		}		
+		
+		* Split out the different control sets
+		tokenize `"`controlsinteract'"'
+
+		local k = 0
+		while `"`1'"' != "" {
+			local k = `k'+1
+
+			* Perform a full trim to remove leading and trailing spaces
+			mata: st_local("1",strtrim(st_local("1")))
+			
+			confirm variable `1'
+
+			local controlvars_`k' `"`1'"'
+			macro shift
+		}
+		
+		local num_sets_controls = `k'		
+	}
+
+	* Controls option (simple 1:1 substitution, no increase in number of hypotheses)	
 	qui if `"`controls'"'!="" {
 		
 		if mi("`outcome_vars'") {
@@ -135,15 +174,12 @@ program define wyoung, rclass
 			local controlvars_`k' `"`1'"'
 			macro shift
 		}
-		
-		local num_sets_controls = `k'		
-	}
-	
-	if strpos(`"`cmd'"'," CONTROLVARS") & `"`controls'"'=="" {
-		di as error "cannot have {it:CONTROLVARS} without specifying option {cmd:controls()}"
-		exit 198		
-	}
-	
+		local tmp : word count `outcome_vars'
+		if `k'!=`tmp' {
+			di as error "Number of varlists in controls() option does not equal the number of outcomes"
+			exit 198
+		}
+	}		
 	
 	******
 	* Syntax 1: user specifies varlist that will replace "OUTCOMEVAR"
@@ -203,9 +239,12 @@ program define wyoung, rclass
 				
 				forval c = 1/`num_sets_controls' {
 					
+					* Default is blank; otherwise controlsinteract() option operates here; overwritten below if controls() was specified instead
 					local controls_touse "`controlvars_`c''"
 					
 					forval i = 1/`num_outcomes' {
+						
+						if `"`controls'"'!="" local controls_touse "`controlvars_`i''"
 
 						tokenize `outcome_vars'
 						local outcomevar_`k' "``i''"
@@ -310,18 +349,15 @@ program define wyoung, rclass
 		if "`subgroup'"!="" & mod(`k',`num_outcomes')==1                         noi di as text _n "subgroup: " as result `"`subgroup_`k''"'
 		else if (`num_outcomes'==0 | mod(`k',`num_outcomes')==1)                 noi di as text ""
 		if `num_outcomes'==0 | mod(`k',`num_outcomes')==1                        noi di as text "familyp: " as result `"`familyp_`k''"'
-		if `"`controls'"'!="" & (`num_outcomes'==0 | mod(`k',`num_outcomes')==1) noi di as text "controls: " as result `"`controls_`k''"'
+		if `"`controlsinteract'"'!="" & (`num_outcomes'==0 | mod(`k',`num_outcomes')==1) noi di as text "controls: " as result `"`controls_`k''"'
 		
 		noi di in yellow _skip(4) `"`cmdline_`k''"'
 	
 		tempname p_`k' ystar_`k'
 
 		* Run regression k
-		cap `cmdline_`k''
-		if _rc {
-			noi di as error "The following error occurred when running the command " as result `"`cmdline_`k'':"'
-			error _rc
-		}
+		`cmdline_`k''
+		
 		local N_`k' = e(N)
 		if "`e(vce)'"=="cluster" local vce_cluster 1
 		if !mi("`e(depvar)'") local outcomevar_`k' "`e(depvar)'"
@@ -491,7 +527,7 @@ program define wyoung, rclass
 	qui gen double p = .
 	qui gen familyp = ""
 	if !mi("`subgroup'") qui gen subgroup = .
-	if !mi(`"`controls'"') qui gen controls = ""
+	if !mi(`"`controlsinteract'"') qui gen controlspec = ""
 	if !mi("`detail'") qui gen N = .
 
 	qui forval k = 1/`K' {
@@ -500,10 +536,10 @@ program define wyoung, rclass
 		replace coef = `beta_`k''              if k==`k'
 		replace stderr = `stderr_`k''          if k==`k'
 		replace p  = `p_`k''                   if k==`k'
-		replace familyp = "`familyp_`k''"      if k==`k'
-		if !mi("`subgroup'")   replace subgroup = `subgroup_`k''   if k==`k'
-		if !mi(`"`controls'"') replace controls = "`controls_`k''" if k==`k'
-		if !mi("`detail'")     replace N        = `N_`k''          if k==`k'
+		replace familyp = "`familyp_`k''"                                          if k==`k'
+		if !mi("`subgroup'")           replace subgroup = `subgroup_`k''           if k==`k'
+		if !mi(`"`controlsinteract'"') replace controlspec = "`controls_`k''" if k==`k'
+		if !mi("`detail'")             replace N        = `N_`k''                  if k==`k'
 	}	
 	
 	* Step 5. Enforce monotonicity using successive maximization.  Include k in the sort to break ties.
@@ -523,7 +559,7 @@ program define wyoung, rclass
 	
 	if !mi("`detail'") local Ns "N Navg Nmin Nmax"
 	if !mi("`subgroup'") local subgroup subgroup
-	if !mi(`"`controls'"') local controls controls
+	if !mi(`"`controlsinteract'"') local controlspec controlspec
 	
 	label var pbonf "Bonferroni-Holm p-value"
 	label var psidak "Sidak-Holm p-value"
@@ -552,7 +588,7 @@ program define wyoung, rclass
 	
 	sort k
 	drop `j'
-	order k model outcome `controls' familyp `subgroup' coef stderr p `Ns'
+	order k model outcome `controlspec' familyp `subgroup' coef stderr p `Ns'
 	list
 	
 	mkmat coef stderr p*, matrix(`mat')

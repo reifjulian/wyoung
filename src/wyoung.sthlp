@@ -61,6 +61,7 @@ If only one {it:varname} is specified, {cmd:wyoung} applies it to all {it:model}
 {cmd:cluster(}{help varlist:varlist}{cmd:)} specifies variables identifying clusters.  
 If {cmd:cluster()} is specified, the sample drawn during each replication is a bootstrap sample of clusters.
 This option is required if {it:model} includes clustered standard errors, unless {cmd:force} is specified.
+See example 3 below.
 
 {p 4 8 2}
 {cmd:force} allows the user to include a model with clustered standard errors without also specifying the {cmd:cluster()} bootstrap option.
@@ -70,12 +71,20 @@ This option is required if {it:model} includes clustered standard errors, unless
 If {cmd:subgroup()} is specified, {cmd:wyoung} will estimate models separately for each subgroup. 
 By default, specifying {cmd:subgroup()} will cause {cmd:wyoung} to select bootstrap samples within each subgroup, unless you specify otherwise in {cmd:strata()}.
 This option is only available when employing Syntax 1.
+See example 4 below.
 
 {p 4 8 2}
-{cmd:controls(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} instructs {cmd:wyoung} to estimate the model separately 
-for different sets of controls. 
+{cmd:controls(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} lets you specify different controls for each outcome.
 This option is only available when employing Syntax 1. The control variables are indicated in {it:model} by "CONTROLVARS" (upper case).
-{cmd:wyoung} will estimate multiple specifications by substituting into "CONTROLVARS" each {it:varlist} specified by the user.
+For the first outcome variable, {cmd:wyoung} will substitute {it:varlist1} into "CONTROLVARS", for the second outcome it will
+substitute {it:varlist2}, and so on. See example 7 below.
+
+{p 4 8 2}
+{cmd:controlsinteract(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} is a variation on {cmd:controls()} that 
+will estimate the model separately for all pairwise combinations of outcome variables and specified controls.
+Each set of controls will be substituted into "CONTROLVARS" as specified in {it:model}.
+Specifying {it:N} different sets of controls ({it:varlist1}, {it:varlist2}, ..., {it:varlistN}) will multiply 
+the number of hypotheses being tested by {it:N}. See example 8 below.
 
 {p 4 8 2}
 {cmd:singlestep} computes the single-step adjusted {it:p}-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their
@@ -175,10 +184,21 @@ sizes across bootstraps.
 
 {col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp bootstraps(100) seed(20)}}
 
-{p 4 4 2}7. Estimate models separately for different sets of controls (3 hypotheses).
+{p 4 4 2}7. Estimate a model that uses different controls for two different outcomes (2 hypotheses).
 
-{col 8}{cmd:. {stata wyoung mpg, cmd(regress OUTCOMEVAR displacement CONTROLVARS) familyp(displacement) controls("headroom" "turn" "headroom turn") bootstraps(100) seed(20)}}
+{col 8}Syntax 1:
+{col 8}{cmd:. {stata wyoung mpg rep78, cmd(regress OUTCOMEVAR displacement CONTROLVARS) familyp(displacement) controls("headroom" "turn") bootstraps(100) seed(20)}}
 
+{col 8}Syntax 2 (identical output):
+{col 8}{cmd:. {stata wyoung, cmd("regress mpg displacement headroom" "regress rep78 displacement turn") familyp(displacement) bootstraps(100) seed(20)}}
+
+{p 4 4 2}8. Estimate a model that interacts two different sets of controls with two different outcomes (4 hypotheses).
+
+{col 8}Syntax 1:
+{col 8}{cmd:. {stata wyoung mpg rep78, cmd(regress OUTCOMEVAR displacement CONTROLVARS) familyp(displacement) controlsinteract("headroom" "turn") bootstraps(100) seed(20)}}
+
+{col 8}Syntax 2 (identical output):
+{col 8}{cmd:. {stata wyoung, cmd("regress mpg displacement headroom" "regress rep78 displacement headroom" "regress mpg displacement turn"  "regress rep78 displacement turn") familyp(displacement) bootstraps(100) seed(20)}}
 
 {title:Stored results}
 
