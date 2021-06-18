@@ -1,6 +1,6 @@
 # WYOUNG: control the family-wise error rate when performing multiple hypothesis tests
 
-- Current version: `1.3.1 20feb2021`
+- Current version: `1.3.2 16jun2021`
 - Jump to: [`overview`](#overview) [`installation`](#installation) [`examples`](#examples) [`update history`](#update-history) [`citation`](#citation) 
 
 -----------
@@ -65,6 +65,9 @@ wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displa
 ![Example 4](images/example_lincom.PNG)
 
 ## Update History:
+* **1.3.2**
+  - better error handling added for `detail` option
+
 * **1.3.1**
   - `controls()` option edited; previous functionality moved to `controlsinteract()`
 

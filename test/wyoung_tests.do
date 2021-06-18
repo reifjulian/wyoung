@@ -9,7 +9,6 @@ set more off
 set tracedepth 1
 * set trace on
 
-
 *********************************************
 * Example 1
 *********************************************
@@ -26,6 +25,11 @@ cf _all using "compare/examp1.dta"
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(100) seed(20) replace noresampling
 cf _all using "compare/examp1.dta"
+
+* noresampling can't be specified with detail
+sysuse auto, clear
+rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") familyp(displacement) bootstraps(10) seed(20) detail noresampling replace
+assert _rc==198
 
 * Compound double quotes
 sysuse auto, clear
@@ -168,14 +172,23 @@ gen lag_w = L.w
 gen lag_k = L.k
 gen lag_ys = L.ys
 wyoung w k ys, cmd("regress OUTCOMEVAR yr1980 CONTROLVARS") familyp(yr1980) controls(lag_w lag_k lag_ys) bootstraps(50) seed(20) replace
-cf _all using "compare/controls2.dta"
+keep k p pwyoung pbonf psidak
+ren p* p*_test
+merge 1:1 k using "compare/controls2.dta", assert(match) nogenerate
+foreach v in p pwyoung pbonf psidak {
+	assert abs(`v'-`v'_test)<0.000001
+}
 
 webuse abdata, clear
 gen lag_w = L.w
 gen lag_k = L.k
 gen lag_ys = L.ys
 wyoung, cmd(`" `""regress w yr1980 lag_w""' `""regress k yr1980 lag_k""' `""regress ys yr1980 lag_ys""' "') familyp(yr1980) bootstraps(50) seed(20) replace
-cf _all using "compare/controls2.dta"
+ren p* p*_test
+merge 1:1 k using "compare/controls2.dta", assert(match) nogenerate
+foreach v in p pwyoung pbonf psidak {
+	assert abs(`v'-`v'_test)<0.000001
+}
 
 sysuse auto, clear
 wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" gear_ratio) bootstraps(50) seed(20) replace
@@ -192,7 +205,12 @@ assert _rc==111
 * Undocumented weights() option 
 use "compare/wellness.dta", clear
 wyoung spend_0715_0716 spendOff_0715_0716 spendHosp_0715_0716 spendRx_0715_0716 nonzero_spend_0715_0716, familyp(hra_c_yr1) bootstraps(100) seed(11) cmd("_regress OUTCOMEVAR hra_c_yr1 [aw=WEIGHTVAR], robust") weights(covg_0715_0716 covg_0715_0716 covg_0715_0716 covg_0715_0716 constant) replace
-cf _all using "compare/wellness_wy.dta"
+keep k p*
+ren p* p*_test
+merge 1:1 k using "compare/wellness_wy.dta", assert(match) nogenerate
+foreach v in p pwyoung pbonf psidak {
+	assert abs(`v'-`v'_test)<0.000001
+}
 
 ***
 * Missing data examples
@@ -229,7 +247,12 @@ cap wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length") fami
 
 sysuse auto, clear
 wyoung trunk foreign rep78, cmd("ivreg2 OUTCOMEVAR (length=price)") familyp(length) bootstraps(100) seed(20) replace
-cf _all using "compare/iv1.dta"
+keep k p*
+ren p* p*_test
+merge 1:1 k using "compare/iv1.dta", assert(match) nogenerate
+foreach v in p pwyoung pbonf psidak {
+	assert abs(`v'-`v'_test)<0.000001
+}
 
 * Generate error if user incorrectly asks for familyp value for the instrument
 sysuse auto, clear

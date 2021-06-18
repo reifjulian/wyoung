@@ -1,4 +1,5 @@
-*! wyoung 1.3.1 20feb2021 by Julian Reif
+*! wyoung 1.3.2 16jun2021 by Julian Reif
+* 1.3.2: error handling code added for case where user specifies both detail and noresampling
 * 1.3.1: new controls option functionality. Old functionality moved to controlsinteract
 * 1.3: controls option added
 * 1.2: familyp option now supports multiple variables. subgroup option added
@@ -71,6 +72,12 @@ program define wyoung, rclass
 	if !mi("`cluster'") {
 		tempname id_cluster
 		local bs_cluster "cluster(`cluster') idcluster(`id_cluster')"
+	}
+	
+	* Detail options
+	if "`detail'"!="" & "`resampling'"=="noresampling" {
+		di as error "cannot specify both the detail and noresampling options"
+		exit 198
 	}
 	
 	* Subgroup option
