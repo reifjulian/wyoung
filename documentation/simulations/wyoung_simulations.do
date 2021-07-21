@@ -43,7 +43,7 @@ local NOBS  = 100
 * Run simulations for each scenario
 ***********************************
 
-qui foreach scen in /*"normal" "subgroup" "lognormal" "correlated" "cluster" "lincom" "nlcom" "multiplefamilyp"*/ {
+qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "lincom" "nlcom" "multiplefamilyp" {
 
 	set seed 20
 
