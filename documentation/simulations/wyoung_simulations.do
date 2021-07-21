@@ -15,7 +15,7 @@
 * NOBS specifies the sample size
 * Ideally, both NSIM and NBOOT are "large". However, if forced to choose for computational reasons, Westfall and Young (1993) recommend erring on the side of using NSIM > NBOOT. 
 
-* Note: this script requires the -regsave- and -texsave- modules to run. Type -ssc install regsave, replace- and -ssc install texsave, replace- at the Stata prompt to install them.
+* Note: this script requires the -texsave- module to run. Type -ssc install texsave, replace- at the Stata prompt to install it.
 *********************************************************************************************************************
 *********************************************************************************************************************
 *********************************************************************************************************************
