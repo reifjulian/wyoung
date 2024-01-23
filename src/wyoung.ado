@@ -1,5 +1,5 @@
 *! wyoung 1.3.3 18jan2024 by Julian Reif
-* 1.3.3: fixed bug where unadjusted p-val's did not use correct df for Stata versions 14 and lower
+* 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
 * 1.3.1: new controls option functionality. Old functionality moved to controlsinteract
 * 1.3: controls option added
