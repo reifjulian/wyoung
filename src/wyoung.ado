@@ -1,4 +1,5 @@
-*! wyoung 1.3.2 16jun2021 by Julian Reif
+*! wyoung 1.3.3 18jan2024 by Julian Reif
+* 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
 * 1.3.1: new controls option functionality. Old functionality moved to controlsinteract
 * 1.3: controls option added
@@ -408,17 +409,17 @@ program define wyoung, rclass
 
 			local tstat = abs(`beta_`k'' / `stderr_`k'')
 			
+			* Calculate p-val using degrees of freedom from e(df_r), if it exists. Else assume normality
 			cap local df = `e(df_r)'
-			cap confirm numeric `df'
+			cap confirm number `df'
 			if !_rc scalar `p_`k'' = tprob(`df', abs(`tstat'))
 			else    scalar `p_`k'' = 2*(1-normprob(abs(`tstat')))
-
+			
 			if `p_`k''==. {
 				noi di as error "p-value not available and could not be calculated when running the command " as result `"`cmdline_`k''"'
 				exit 504
 			}
-		}		
-		
+		}
 	}
 
 	* Issue error if user is estimating a model with clustered standard errors AND did not specify a bootstrap cluster (unless force option specified)
