@@ -9,6 +9,15 @@ set more off
 set tracedepth 1
 * set trace on
 
+
+*********************************************
+* Permute examples
+*********************************************
+
+
+sysuse auto, clear
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) bootstraps(100) seed(20) permute(foreign) replace
+
 *********************************************
 * Example 1
 *********************************************

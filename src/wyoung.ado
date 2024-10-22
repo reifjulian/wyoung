@@ -1,4 +1,5 @@
-*! wyoung 1.3.3 18jan2024 by Julian Reif
+*! wyoung 1.4 22oct2024 by Julian Reif
+* 1.4: added permute option (thanks to Adam Sacarny). TO DO: factor variable bug
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
 * 1.3.1: new controls option functionality. Old functionality moved to controlsinteract
@@ -23,7 +24,8 @@ program define wyoung, rclass
 	version 12
 
 	* Syntax 1: one model with multiple outcomes (and possibly multiple controls and subgroups)
-	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp replace]
+	noi di in green "NOTE: Running beta (permute) version of wyoung" _n
+	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp replace permute(varname) Nofvunab]
 	
 	local outcome_vars "`varlist'"
 	
@@ -199,7 +201,11 @@ program define wyoung, rclass
 		* If user specified familypexp (rare), then the input is a single lincom/nlcom expression, not a varlist
 		local num_familypvars = 1
 		if "`familypexp'"=="" {
-			fvunab familyp : `familyp'
+**** // START NEW CODE
+			if ("`nofvunab'"!="nofvunab") {
+				fvunab familyp : `familyp'
+			}
+**** // END NEW CODE			
 			local num_familypvars : word count `familyp'
 		}
 
@@ -414,7 +420,7 @@ program define wyoung, rclass
 			cap confirm number `df'
 			if !_rc scalar `p_`k'' = tprob(`df', abs(`tstat'))
 			else    scalar `p_`k'' = 2*(1-normprob(abs(`tstat')))
-			
+
 			if `p_`k''==. {
 				noi di as error "p-value not available and could not be calculated when running the command " as result `"`cmdline_`k''"'
 				exit 504
@@ -440,8 +446,21 @@ program define wyoung, rclass
 		***
 		qui forval i = 1/`N' {
 
-			* Draw a (possibly stratified, possibly clustered) random sample with replacement
-			bsample, `bs_strata' `bs_cluster'
+**** // START NEW CODE
+			* Draw a (possibly stratified, possibly clustered) random sample with replacement, OR do a permutation
+			if ("`permute'"!="") {
+                if ("`bs_cluster'"!="") {
+                    display "clustering when permuting not supported"
+                    error 198
+                }
+                local permute_cluster = regexr("`bs_strata'","^strata\(","cluster(")
+                shufflevar `permute', `permute_cluster' dropold
+            }
+            else {
+                bsample, `bs_strata' `bs_cluster'
+            }
+**** // END NEW CODE
+
 			if "`bs_cluster'"!="" {
 				drop `cluster'
 				ren `id_cluster' `cluster'
@@ -456,19 +475,37 @@ program define wyoung, rclass
 					error _rc
 				}
 				local Ni_`k' = e(N)
-				
-				cap test `familyp_`k'' == `beta_`k''
+
+**** // START NEW CODE
+                if ("`permute'"!="") {
+    				cap test `familyp_`k'' == 0
+                }
+                else {
+    				cap test `familyp_`k'' == `beta_`k''
+                }
 				if _rc==131 {
-					cap testnl `familyp_`k'' == `beta_`k''
+                    if ("`permute'"!="") {
+                        cap testnl `familyp_`k'' == 0
+                    }
+                    else {
+                        cap testnl `familyp_`k'' == `beta_`k''
+                    }
 					if _rc {
 						noi di as error _n `"`familyp_`k'' is invalid syntax for {cmd:test} and {cmd:testnl}"'
 						error _rc
 					}
 				}
 				else if _rc {
-					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `beta_`k''"' as error " on a bootstrap sample:"					
-					test `familyp_`k'' == `beta_`k''
+                    if ("`permute'"!="") {
+    					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == 0"' as error " on a permuted sample:"					
+    					test `familyp_`k'' == 0
+                    }
+                    else {
+    					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `beta_`k''"' as error " on a bootstrap sample:"					
+    					test `familyp_`k'' == `beta_`k''
+                    }
 				}
+**** // END NEW CODE				
 				local pstar_`k' = r(p)
 			}
 			
@@ -612,5 +649,64 @@ program define wyoung, rclass
 	return local cmd wyoung
 end
 
-** EOF
 
+*1.1 GHR January 24, 2011
+
+*changelog
+*1.1 -- fixed bug that let one case per "cluster" be misallocated (thanks to Elizabeth Blankenspoor)
+
+capture program drop shufflevar
+program define shufflevar
+	version 10
+	syntax varlist(min=1) [ , Joint DROPold cluster(varname)]
+	tempvar oldsortorder
+	gen `oldsortorder'=[_n]
+	if "`cluster'"!="" {
+		local bystatement "by `cluster': "
+	}
+	else {
+		local bystatement ""
+	}
+	if "`joint'"=="joint" {
+		tempvar newsortorder
+		gen `newsortorder'=uniform()
+		sort `cluster' `newsortorder'
+		foreach var in `varlist' {
+			capture drop `var'_shuffled
+			quietly {
+				`bystatement' gen `var'_shuffled=`var'[_n-1]
+				`bystatement' replace `var'_shuffled=`var'[_N] if _n==1
+			}
+			if "`dropold'"=="dropold" {
+				drop `var'
+			}
+		}
+		sort `oldsortorder'
+		drop `newsortorder' `oldsortorder'
+	}
+	else {
+		foreach var in `varlist' {
+			tempvar newsortorder
+			gen `newsortorder'=uniform()
+			sort `cluster' `newsortorder'
+			capture drop `var'_shuffled
+			quietly {
+				`bystatement' gen `var'_shuffled=`var'[_n-1]
+				`bystatement' replace `var'_shuffled=`var'[_N] if _n==1
+			}
+			drop `newsortorder'
+			if "`dropold'"=="dropold" {
+				drop `var'
+**** // START NEW CODE				
+				ren `var'_shuffled `var'
+**** // END NEW CODE								
+			}
+		}
+		sort `oldsortorder'
+		drop `oldsortorder'
+	}
+end
+
+
+
+** EOF
