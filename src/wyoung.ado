@@ -477,33 +477,21 @@ program define wyoung, rclass
 				local Ni_`k' = e(N)
 
 **** // START NEW CODE
-                if ("`permute'"!="") {
-    				cap test `familyp_`k'' == 0
-                }
-                else {
-    				cap test `familyp_`k'' == `beta_`k''
-                }
+				* Under permutation (randomization inference), which breaks link between X and Y, we test the null coef = 0. Under bootstrapping, which preserves link between X and Y, we test coef = original beta
+				if ("`permute'"!="") local complete_null = 0
+				else                 local complete_null = `beta_`k''
+
+    			cap test `familyp_`k'' == `complete_null'
 				if _rc==131 {
-                    if ("`permute'"!="") {
-                        cap testnl `familyp_`k'' == 0
-                    }
-                    else {
-                        cap testnl `familyp_`k'' == `beta_`k''
-                    }
+					cap testnl `familyp_`k'' == `beta_`k''
 					if _rc {
 						noi di as error _n `"`familyp_`k'' is invalid syntax for {cmd:test} and {cmd:testnl}"'
 						error _rc
 					}
 				}
 				else if _rc {
-                    if ("`permute'"!="") {
-    					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == 0"' as error " on a permuted sample:"					
-    					test `familyp_`k'' == 0
-                    }
-                    else {
-    					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `beta_`k''"' as error " on a bootstrap sample:"					
-    					test `familyp_`k'' == `beta_`k''
-                    }
+					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `beta_`k''"' as error " on a bootstrap/permutation sample:"					
+					test `familyp_`k'' == `beta_`k''
 				}
 **** // END NEW CODE				
 				local pstar_`k' = r(p)

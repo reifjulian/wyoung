@@ -17,6 +17,13 @@ set tracedepth 1
 
 sysuse auto, clear
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) bootstraps(100) seed(20) permute(foreign) replace
+cf _all using "compare/permute1.dta"
+
+sysuse auto, clear
+gen st = floor(mpg/11)
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) bootstraps(100) seed(20) permute(foreign) strata(st) replace
+cf _all using "compare/permute2.dta"
+
 
 *********************************************
 * Example 1
