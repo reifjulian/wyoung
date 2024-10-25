@@ -1,8 +1,8 @@
-*! wyoung 1.4 24oct2024 by Julian Reif
-* 1.4: added permute option (thanks to Adam Sacarny). TO DO: factor variable bug
+*! wyoung 1.4 25oct2024 by Julian Reif
+* 1.4: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. TO DO: factor variable bug, update help file and github examples
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
-* 1.3.1: new controls option functionality. Old functionality moved to controlsinteract
+* 1.3.1: new controls option functionality. old functionality moved to controlsinteract
 * 1.3: controls option added
 * 1.2: familyp option now supports multiple variables. subgroup option added
 * 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
@@ -17,7 +17,7 @@
 ***
 
 * K = number of hypotheses = num subgroups X num familyp X num outcomes X num controls
-* N = number of bootstraps
+* N = number of bootstraps/permutations
 
 program define wyoung, rclass
 
@@ -25,8 +25,8 @@ program define wyoung, rclass
 
 	* Syntax 1: one model with multiple outcomes (and possibly multiple controls and subgroups)
 	noi di in green "NOTE: Running beta (permute) version of wyoung" _n
-	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp replace permute(varname) Nofvunab]
-	
+	syntax [varlist(default=none)], cmd(string) reps(int) familyp(string) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp replace permute(varname) Nofvunab]
+
 	local outcome_vars "`varlist'"
 	
 	* Syntax 2: different models
@@ -48,12 +48,12 @@ program define wyoung, rclass
 	* Error check syntax options
 	******	
 
-	* N = number of bootstraps
-	local N = `bootstraps'
+	* N = number of bootstraps/permutations
+	local N = `reps'
 	capture assert `N' > 0
 	if _rc {
-		di as err "bootstrap size must be greater than zero"
-		exit 198
+		di as err "reps() invalid -- invalid number, outside of allowed range"
+		exit 125
 	}	
 	
 	* Seed option
@@ -428,7 +428,7 @@ program define wyoung, rclass
 		}
 	}
 
-	* Issue error if user is estimating a model with clustered standard errors AND did not specify a bootstrap cluster (unless force option specified)
+	* Issue error if user is estimating a model with clustered standard errors AND did not specify a bootstrap/permutation cluster (unless force option specified)
 	if "`vce_cluster'"=="1" & mi("`cluster'") & mi("`force'") {
 			di as error "estimating model with clustered standard errors, but {bf:cluster()} option was not specified"
 			exit 198
@@ -437,12 +437,12 @@ program define wyoung, rclass
 	preserve
 	
 	******
-	* Use bootstrapping to resample the data, and calculated Westfall-Young adjusted p-vals
+	* Resample the data and calculated Westfall-Young adjusted p-vals
 	******	
 	if "`resampling'"!="noresampling" {
 
 		***
-		* Step 2(a). Loop over each bootstrap i and calculate pstar's
+		* Step 2(a). Loop over each sample i and calculate pstar's
 		***
 		qui forval i = 1/`N' {
 
@@ -453,10 +453,7 @@ program define wyoung, rclass
                     display "clustering when permuting not supported"
                     error 198
                 }
-                local permute_cluster = regexr("`bs_strata'","^strata\(","cluster(")
-                *_shuffle `permute', `permute_cluster'
 				_shuffle `permute', `bs_strata'
-				*shufflevar `permute', `permute_cluster' dropold
             }
             else {
                 bsample, `bs_strata' `bs_cluster'
@@ -473,7 +470,7 @@ program define wyoung, rclass
 
 				cap `cmdline_`k''
 				if _rc {
-					noi di as error _n "The following error occurred when running the command " as result `"`cmdline_`k''"' as error " on a bootstrap sample:"
+					noi di as error _n "The following error occurred when running the command " as result `"`cmdline_`k''"' as error " on a bootstrap/permutation sample:"
 					error _rc
 				}
 				local Ni_`k' = e(N)
@@ -603,9 +600,9 @@ program define wyoung, rclass
 	cap label var pwyoung   "Westfall-Young adjusted p-value"
 	cap label var pwyoung1 "Westfall-Young adjusted p-value (single-step)"
 	cap label var N "Number of obs"
-	cap label var Navg "Average number of obs (bootstraps)"
-	cap label var Nmin "Min number of obs (bootstraps)"
-	cap label var Nmax "Max number of obs (bootstraps)"
+	cap label var Navg "Average number of obs (reps)"
+	cap label var Nmin "Min number of obs (reps)"
+	cap label var Nmax "Max number of obs (reps)"
 	
 	assert psidak<=pbonf+0.00000000001
 	foreach v of varlist p* {
