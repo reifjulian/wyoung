@@ -480,7 +480,7 @@ program define wyoung, rclass
 				if ("`permute'"!="") local complete_null = 0
 				else                 local complete_null = `beta_`k''
 
-    			cap test `familyp_`k'' == `complete_null'
+				cap test `familyp_`k'' == `complete_null'
 				if _rc==131 {
 					cap testnl `familyp_`k'' == `beta_`k''
 					if _rc {
