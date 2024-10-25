@@ -1,4 +1,4 @@
-*! wyoung 1.4 22oct2024 by Julian Reif
+*! wyoung 1.4 24oct2024 by Julian Reif
 * 1.4: added permute option (thanks to Adam Sacarny). TO DO: factor variable bug
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
@@ -454,7 +454,9 @@ program define wyoung, rclass
                     error 198
                 }
                 local permute_cluster = regexr("`bs_strata'","^strata\(","cluster(")
-                shufflevar `permute', `permute_cluster' dropold
+                *_shuffle `permute', `permute_cluster'
+				_shuffle `permute', `bs_strata'
+				*shufflevar `permute', `permute_cluster' dropold
             }
             else {
                 bsample, `bs_strata' `bs_cluster'
@@ -638,63 +640,29 @@ program define wyoung, rclass
 end
 
 
-*1.1 GHR January 24, 2011
 
-*changelog
-*1.1 -- fixed bug that let one case per "cluster" be misallocated (thanks to Elizabeth Blankenspoor)
 
-capture program drop shufflevar
-program define shufflevar
-	version 10
-	syntax varlist(min=1) [ , Joint DROPold cluster(varname)]
-	tempvar oldsortorder
-	gen `oldsortorder'=[_n]
-	if "`cluster'"!="" {
-		local bystatement "by `cluster': "
-	}
-	else {
-		local bystatement ""
-	}
-	if "`joint'"=="joint" {
-		tempvar newsortorder
-		gen `newsortorder'=uniform()
-		sort `cluster' `newsortorder'
-		foreach var in `varlist' {
-			capture drop `var'_shuffled
-			quietly {
-				`bystatement' gen `var'_shuffled=`var'[_n-1]
-				`bystatement' replace `var'_shuffled=`var'[_N] if _n==1
-			}
-			if "`dropold'"=="dropold" {
-				drop `var'
-			}
-		}
-		sort `oldsortorder'
-		drop `newsortorder' `oldsortorder'
-	}
-	else {
-		foreach var in `varlist' {
-			tempvar newsortorder
-			gen `newsortorder'=uniform()
-			sort `cluster' `newsortorder'
-			capture drop `var'_shuffled
-			quietly {
-				`bystatement' gen `var'_shuffled=`var'[_n-1]
-				`bystatement' replace `var'_shuffled=`var'[_N] if _n==1
-			}
-			drop `newsortorder'
-			if "`dropold'"=="dropold" {
-				drop `var'
-**** // START NEW CODE				
-				ren `var'_shuffled `var'
-**** // END NEW CODE								
-			}
-		}
-		sort `oldsortorder'
-		drop `oldsortorder'
+* TO DO: add cluster option
+capture program drop _shuffle
+program define _shuffle
+
+	syntax varlist(min=1) [, strata(varname)]
+	
+	if "`strata'"!="" local bystatement "by `strata': "
+
+	tempvar newsortorder
+	foreach var in `varlist' {
+		
+		gen `newsortorder' = uniform()
+		sort `strata' `newsortorder', stable
+
+		tempvar `var'_shuffled
+		`bystatement' gen ``var'_shuffled'     = `var'[_n-1]
+		`bystatement' replace ``var'_shuffled' = `var'[_N] if _n==1
+		
+		drop `newsortorder' `var'
+		ren ``var'_shuffled' `var'
 	}
 end
-
-
 
 ** EOF
