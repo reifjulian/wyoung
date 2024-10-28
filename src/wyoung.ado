@@ -1,5 +1,5 @@
-*! wyoung 1.4 26oct2024 by Julian Reif
-* 1.4: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. fixed factor variables bug. TO DO: update help file and github examples
+*! wyoung 2.0 28oct2024 by Julian Reif
+* 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. fixed factor variables bug. TO DO: update help file and github examples
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
 * 1.3.1: new controls option functionality. old functionality moved to controlsinteract
@@ -667,14 +667,14 @@ program define _shuffle
 	}
 end
 
-cap program drop _fvexpandnobase
+
 program _fvexpandnobase
     
 	* Record original setting
 	local fvbase = c(fvbase)
 	set fvbase off
 
-	cap noisily fvexpand `0'
+	cap noi fvexpand `0'
 
 	* Restore original setting
 	set fvbase `fvbase'
