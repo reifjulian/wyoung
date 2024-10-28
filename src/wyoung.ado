@@ -1,5 +1,5 @@
-*! wyoung 1.4 25oct2024 by Julian Reif
-* 1.4: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. TO DO: factor variable bug, update help file and github examples
+*! wyoung 1.4 26oct2024 by Julian Reif
+* 1.4: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. fixed factor variables bug. TO DO: update help file and github examples
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
 * 1.3.1: new controls option functionality. old functionality moved to controlsinteract
@@ -25,7 +25,7 @@ program define wyoung, rclass
 
 	* Syntax 1: one model with multiple outcomes (and possibly multiple controls and subgroups)
 	noi di in green "NOTE: Running beta (permute) version of wyoung" _n
-	syntax [varlist(default=none)], cmd(string) reps(int) familyp(string) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp replace permute(varname) Nofvunab]
+	syntax [varlist(default=none)], cmd(string) familyp(string) Reps(int) [BOOTstraps(numlist int max=1) weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp permute(varname) replace]
 
 	local outcome_vars "`varlist'"
 	
@@ -48,11 +48,17 @@ program define wyoung, rclass
 	* Error check syntax options
 	******	
 
-	* N = number of bootstraps/permutations
+	* N = number of bootstraps/permutations (default=100). Provide legacy support for bootstraps() option.
+	if "`reps'`bootstraps'"=="" local reps=100
+	if "`reps'"=="" local reps `bootstraps'
+	if "`reps'"!="" & "`bootstraps'"!="" {
+		di as error "cannot specify both reps() and bootstraps()"
+		exit 198
+	}
 	local N = `reps'
 	capture assert `N' > 0
 	if _rc {
-		di as err "reps() invalid -- invalid number, outside of allowed range"
+		di as err "reps() invalid -- must be greater than zero"
 		exit 125
 	}	
 	
@@ -202,9 +208,8 @@ program define wyoung, rclass
 		local num_familypvars = 1
 		if "`familypexp'"=="" {
 **** // START NEW CODE
-			if ("`nofvunab'"!="nofvunab") {
-				fvunab familyp : `familyp'
-			}
+			_fvexpandnobase `familyp'
+			local familyp `r(varlist)'
 **** // END NEW CODE			
 			local num_familypvars : word count `familyp'
 		}
@@ -570,7 +575,7 @@ program define wyoung, rclass
 		replace p  = `p_`k''                   if k==`k'
 		replace familyp = "`familyp_`k''"                                          if k==`k'
 		if !mi("`subgroup'")           replace subgroup = `subgroup_`k''           if k==`k'
-		if !mi(`"`controlsinteract'"') replace controlspec = "`controls_`k''" if k==`k'
+		if !mi(`"`controlsinteract'"') replace controlspec = "`controls_`k''"      if k==`k'
 		if !mi("`detail'")             replace N        = `N_`k''                  if k==`k'
 	}	
 	
@@ -650,7 +655,7 @@ program define _shuffle
 	tempvar newsortorder
 	foreach var in `varlist' {
 		
-		gen `newsortorder' = uniform()
+		gen double `newsortorder' = uniform()
 		sort `strata' `newsortorder', stable
 
 		tempvar `var'_shuffled
@@ -660,6 +665,21 @@ program define _shuffle
 		drop `newsortorder' `var'
 		ren ``var'_shuffled' `var'
 	}
+end
+
+cap program drop _fvexpandnobase
+program _fvexpandnobase
+    
+	* Record original setting
+	local fvbase = c(fvbase)
+	set fvbase off
+
+	cap noisily fvexpand `0'
+
+	* Restore original setting
+	set fvbase `fvbase'
+
+	if _rc exit _rc
 end
 
 ** EOF

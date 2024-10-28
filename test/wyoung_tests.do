@@ -24,16 +24,6 @@ gen st = floor(mpg/11)
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) strata(st) replace
 cf _all using "compare/permute2.dta"
 
-
-* Factor variable bug
-sysuse auto, clear
-gen fvar = floor(uniform()*3)
-regress mpg displacement length i.fvar
-di _b[1.fvar]
-program drop _all
-*wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length i.fvar") familyp("1.fvar 2.fvar") reps(100) seed(20) replace
-
-
 *********************************************
 * Example 1
 *********************************************
@@ -158,10 +148,14 @@ sysuse auto, clear
 rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(weight) reps(100) seed(20) replace
 assert _rc==111
 
-*nbootstraps must be greater than 0
+* nbootstraps must be greater than 0; cannot specify both reps() and bootstraps()
 sysuse auto, clear
 rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(weight) reps(0) seed(20) replace
 assert _rc==125
+
+sysuse auto, clear
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(weight) reps(5) bootstraps(50) seed(20) replace
+assert _rc==198
 
 * clustering example
 sysuse auto, clear
@@ -290,22 +284,30 @@ assert _rc == 111
 
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("1.foreign") reps(5) seed(20) replace
-cf _all using "compare/examp_fv.dta"
+cf model-outcome coef-psidak using "compare/examp_fv.dta"
 
 sysuse auto, clear
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i1.foreign") reps(5) seed(20) replace
-cf _all using "compare/examp_fv.dta"
+cf model-outcome coef-psidak using "compare/examp_fv.dta"
 
-* Generate error if user inputs factor variable that is not estimated
+sysuse auto, clear
+gen fvar = floor(uniform()*3)
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length i.fvar") familyp("1.fvar 2.fvar") reps(5) seed(20) replace
+cf _all using "compare/examp_fv2.dta"
+
+* Generate errors if user inputs factor variable that is not estimated
+* (1) i0.foreign technically has coefficient (_b[i0.foreign]=0), but `lincom' fails to produce p-val
 sysuse auto, clear
 rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i0.foreign") reps(5) seed(20) replace
 assert _rc==504
 
-* Generate error if user inputs nonsense factor variables
+* (2) these vars are not in the regression at all, so `lincom' fails
 sysuse auto, clear
 rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i.weight#i.weight") reps(5) seed(20) replace
-assert _rc==198
+assert _rc==111
 
+* Generate error if user inputs nonsense factor variables (here, code fails at `_fvexpandnobase')
+sysuse auto, clear
 rcof noi wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") familyp("i.weight2#i.weight") reps(5) seed(20) replace
 assert _rc==111
 
