@@ -291,6 +291,7 @@ wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement i.foreign") famil
 cf model-outcome coef-psidak using "compare/examp_fv.dta"
 
 sysuse auto, clear
+set seed 1
 gen fvar = floor(uniform()*3)
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length i.fvar") familyp("1.fvar 2.fvar") reps(5) seed(20) replace
 cf _all using "compare/examp_fv2.dta"
