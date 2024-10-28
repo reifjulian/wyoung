@@ -21,7 +21,7 @@
 
 program define wyoung, rclass
 
-	version 12
+	version 13
 
 	* Syntax 1: one model with multiple outcomes (and possibly multiple controls and subgroups)
 	noi di in green "NOTE: Running beta (permute) version of wyoung" _n
