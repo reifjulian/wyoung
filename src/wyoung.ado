@@ -1,4 +1,4 @@
-*! wyoung 2.0 28oct2024 by Julian Reif
+*! wyoung 2.0 2nov2024 by Julian Reif
 * 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. fixed factor variables bug. TO DO: update help file and github examples
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
@@ -43,7 +43,7 @@ program define wyoung, rclass
 	
 	tempfile bs
 	tempname mat nlcom_b nlcom_V
-	
+
 	******
 	* Error check syntax options
 	******	
@@ -71,16 +71,29 @@ program define wyoung, rclass
 		}
 	}
 	
-	* Strata option
-	local bs_strata ""
-	if !mi("`strata'") {
-		local bs_strata "strata(`strata')"
-	}
+	* Strata and cluster options
+	if !mi("`strata'") local strata_option "strata(`strata')"
 	
-	* Cluster option
 	if !mi("`cluster'") {
-		tempname id_cluster
-		local bs_cluster "cluster(`cluster') idcluster(`id_cluster')"
+		local cluster_option "cluster(`cluster')"
+		
+		* Bootstrapping will require a cluster ID variable
+		if "`permute'"=="" {
+			tempname id_cluster
+			local idcluster_option "idcluster(`id_cluster')"
+		}
+		
+		* Permutation var must be constant within strata/cluster groups (within-group stdev should be 0)
+		if "`permute'"!="" {
+			tempvar group
+			egen `group' = group(`strata' `cluster')
+			qui loneway `permute' `group'
+			if r(sd_w) != 0 & !mi(r(sd_w)) {
+				di as err "`permute' is not constant within clusters"
+				exit 9
+			}
+			drop `group'
+		}
 	}
 	
 	* Detail options
@@ -88,7 +101,7 @@ program define wyoung, rclass
 		di as error "cannot specify both the detail and noresampling options"
 		exit 198
 	}
-	
+
 	* Subgroup option
 	local num_subgroups = 1
 	qui if "`subgroup'"!="" {
@@ -110,7 +123,7 @@ program define wyoung, rclass
 		}
 
 		* Subgroup option triggers stratified resampling, unless user overrides
-		if mi("`strata'") local bs_strata "strata(`subgroup')"
+		if mi("`strata'") local strata_option "strata(`subgroup')"
 		
 		* Subgroup option not allowed with a command that contains an "if" 
 		if strpos(`"`cmd'"', " if ") {
@@ -433,9 +446,9 @@ program define wyoung, rclass
 		}
 	}
 
-	* Issue error if user is estimating a model with clustered standard errors AND did not specify a bootstrap/permutation cluster (unless force option specified)
+	* Issue error if user is estimating a model with clustered standard errors AND did not specify a resampling cluster (unless force option specified)
 	if "`vce_cluster'"=="1" & mi("`cluster'") & mi("`force'") {
-			di as error "estimating model with clustered standard errors, but {bf:cluster()} option was not specified"
+			di as error "estimating model with clustered standard errors, but {bf:cluster()} option was not specified; specify {bf:force} to override"
 			exit 198
 	}
 
@@ -452,23 +465,19 @@ program define wyoung, rclass
 		qui forval i = 1/`N' {
 
 **** // START NEW CODE
-			* Draw a (possibly stratified, possibly clustered) random sample with replacement, OR do a permutation
-			if ("`permute'"!="") {
-                if ("`bs_cluster'"!="") {
-                    display "clustering when permuting not supported"
-                    error 198
-                }
-				_shuffle `permute', `bs_strata'
+			* Do a permutation, OR draw a random sample with replacement
+			if "`permute'"!="" {
+				_shuffle `permute', `strata_option' `cluster_option'
             }
             else {
-                bsample, `bs_strata' `bs_cluster'
+                bsample, `strata_option' `cluster_option' `idcluster_option'
+				
+				if "`cluster'"!="" {
+					drop `cluster'
+					ren `id_cluster' `cluster'
+				}				
             }
 **** // END NEW CODE
-
-			if "`bs_cluster'"!="" {
-				drop `cluster'
-				ren `id_cluster' `cluster'
-			}
 
 			* Calculate pstar for each model, using test or testnl
 			qui forval k = 1/`K' {
@@ -642,30 +651,101 @@ program define wyoung, rclass
 end
 
 
-
-
-* TO DO: add cluster option
+* TO DO: Enforce constant treatment and strata within the cluster. Handle missing values for permute variable. rename _shuffle to avoid namespace conflicts. Does permute var need to be the familyp var? (needs to be in regression at least)
 capture program drop _shuffle
 program define _shuffle
 
-	syntax varlist(min=1) [, strata(varname)]
-	
-	if "`strata'"!="" local bystatement "by `strata': "
+	syntax varlist(min=1) [, strata(varname) cluster(varname)]
 
-	tempvar newsortorder
+	tempvar randsort clfirst n_init newvar
+
+	* If no cluster var is specified, each individual observation will be a "cluster"
+	if "`cluster'"=="" {
+		tempvar cluster
+		gen long `cluster' = _n
+	}
+
 	foreach var in `varlist' {
 		
-		gen double `newsortorder' = uniform()
-		sort `strata' `newsortorder', stable
-
-		tempvar `var'_shuffled
-		`bystatement' gen ``var'_shuffled'     = `var'[_n-1]
-		`bystatement' replace ``var'_shuffled' = `var'[_N] if _n==1
+		* Identify first observation in each cluster
+		sort `strata' `cluster', stable
+		by `strata' `cluster': gen byte `clfirst' = 1 if _n==1		
 		
-		drop `newsortorder' `var'
-		ren ``var'_shuffled' `var'
+		* Within strata, for all first observations within clusters, save their position in the data set
+		sort `strata' `clfirst', stable
+		by `strata' `clfirst': gen long `n_init' = _n if `clfirst'!=.
+		
+		* Reshuffle these first observations within strata, and take the treatment status from the observation which was at this position before
+		gen double `randsort' = runiform()
+		sort `strata' `clfirst' `randsort', stable
+		local type : type `var'
+		by `strata' `clfirst': gen `type' `newvar' = `var'[`n_init']
+		
+		* Copy treatment status to all observations in the same cluster
+		sort `strata' `cluster' `clfirst', stable
+		by `strata' `cluster': replace `newvar' = `newvar'[_n-1] if mi(`newvar')
+
+		drop `var' `randsort' `clfirst' `n_init'
+		ren `newvar' `var'
 	}
 end
+
+/* EXAMPLE SHUFFLES
+
+* Simple shuffle
+set seed 21
+qui forval x = 1/100 {
+	noi di "`x'"
+	set seed `x'
+sysuse auto, clear
+label drop origin
+gen cluster = floor(mpg/5)
+gen strata = floor(mod(_n,7))
+drop price-gear_ratio
+gen foreign0 = foreign
+
+_shuffle foreign
+egen sum1 = sum(foreign0)
+egen sum2 = sum(foreign)
+assert sum1==sum2
+drop sum* foreign
+gen foreign = foreign0
+
+
+* Stratified shuffle
+_shuffle foreign, strata(strata)
+sort strata
+by strata: egen sum1 = sum(foreign0)
+by strata: egen sum2 = sum(foreign)
+assert sum1==sum2
+drop sum* strata foreign foreign0
+
+* Cluster shuffle
+bysort cluster: gen byte t = round(uniform()) if _n==1
+by cluster: egen foreigncl = mean(t)
+gen foreigncl0 = foreigncl
+drop t
+preserve
+
+_shuffle foreigncl, cluster(cluster)
+bysort cluster: keep if _n==1
+egen sum1 = sum(foreigncl0)
+egen sum2 = sum(foreigncl)
+assert sum1==sum2
+drop sum*
+restore
+
+* Stratified clustered shuffle
+bysort cluster: gen byte t = round(uniform()) if _n==1
+by cluster: egen stratacl = mean(t)
+drop t
+_shuffle foreigncl, cluster(cluster) strata(stratacl)
+bysort cluster: keep if _n==1
+bysort stratacl: egen sum1 = sum(foreigncl0)
+bysort stratacl: egen sum2 = sum(foreigncl)
+assert sum1==sum2
+	}
+*/
 
 
 program _fvexpandnobase

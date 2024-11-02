@@ -14,7 +14,6 @@ set tracedepth 1
 * Permute examples
 *********************************************
 
-
 sysuse auto, clear
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) replace
 cf _all using "compare/permute1.dta"
@@ -23,6 +22,39 @@ sysuse auto, clear
 gen st = floor(mpg/11)
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) strata(st) replace
 cf _all using "compare/permute2.dta"
+
+
+* When cluster size=1, estimates are identical to non-cluster case
+sysuse auto, clear
+gen clusterid = _n
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) cluster(clusterid) replace
+cf _all using "compare/permute1.dta"
+
+sysuse auto, clear
+gen clusterid = _n
+gen st = floor(mpg/11)
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) cluster(clusterid) strata(st) replace
+cf _all using "compare/permute2.dta"
+
+* clustered standard errors example
+sysuse auto, clear
+expand 100
+set seed 21
+gen clvar = mod(_n,100)
+bysort clvar: gen byte t = round(uniform()) if _n==1
+by clvar: egen foreigncl = mean(t)
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length foreigncl, cluster(clvar)) cluster(clvar) permute(foreigncl) familyp(foreigncl) reps(100) seed(20) replace
+ren p* p*_test
+merge 1:1 k using "compare/permute3.dta", assert(match) nogenerate
+foreach v in p pwyoung pbonf psidak {
+	assert abs(`v'-`v'_test)<0.000001
+}
+
+* Generate error if treatment is not constant within a cluster
+sysuse auto, clear
+gen clusterid = mod(_n,10)
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) cluster(clusterid) replace
+assert _rc==9
 
 *********************************************
 * Example 1
@@ -86,10 +118,15 @@ cf _all using "compare/examp1.dta"
 * Example 3 (clustered standard errors)
 *********************************************
 sysuse auto, clear
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement) reps(100) seed(20)
-cf _all using "compare/examp3.dta"
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) cluster(rep78) familyp(displacement) reps(100) seed(20) replace
+ren p* p*_test
+merge 1:1 k using "compare/examp3.dta", assert(match) nogenerate
+foreach v in p pwyoung pbonf psidak {
+	assert abs(`v'-`v'_test)<0.000001
+}
 
 * Failing to specify bootwstrap cluster should generate an error when clustering, unless force option is specified
+sysuse auto, clear
 rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) familyp(displacement) reps(10) seed(20)
 assert _rc==198
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length, cluster(rep78)) familyp(displacement) reps(10) seed(20) force
