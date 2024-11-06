@@ -1,4 +1,4 @@
-*! wyoung 2.0 2nov2024 by Julian Reif
+*! wyoung 2.0 6nov2024 by Julian Reif
 * 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. fixed factor variables bug. TO DO: update help file and github examples
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
@@ -25,7 +25,7 @@ program define wyoung, rclass
 
 	* Syntax 1: one model with multiple outcomes (and possibly multiple controls and subgroups)
 	noi di in green "NOTE: Running beta (permute) version of wyoung" _n
-	syntax [varlist(default=none)], cmd(string) familyp(string) Reps(int) [BOOTstraps(numlist int max=1) weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp permute(varname) replace]
+	syntax [varlist(default=none)], cmd(string) familyp(string) [Reps(numlist int max=1 >0) BOOTstraps(numlist int max=1 >0) weights(varlist) noRESAMPling seed(numlist max=1) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp permute(varname) PERMUTEProgram(string) replace]
 
 	local outcome_vars "`varlist'"
 	
@@ -56,11 +56,6 @@ program define wyoung, rclass
 		exit 198
 	}
 	local N = `reps'
-	capture assert `N' > 0
-	if _rc {
-		di as err "reps() invalid -- must be greater than zero"
-		exit 125
-	}	
 	
 	* Seed option
 	if !mi("`seed'") {
@@ -86,16 +81,53 @@ program define wyoung, rclass
 		* Permutation var must be constant within strata/cluster groups (within-group stdev should be 0)
 		if "`permute'"!="" {
 			tempvar group
-			egen `group' = group(`strata' `cluster')
-			qui loneway `permute' `group'
-			if r(sd_w) != 0 & !mi(r(sd_w)) {
-				di as err "`permute' is not constant within clusters"
-				exit 9
+			egen long `group' = group(`strata' `cluster')
+			foreach v of varlist `permute' {
+				qui loneway `permute' `group'
+				if r(sd_w) != 0 & !mi(r(sd_w)) {
+					di as err "permutation variable `permute' is not constant within clusters"
+					exit 9
+				}
 			}
 			drop `group'
 		}
 	}
 	
+	* Permute option (default is bootstrapping)
+	if "`permute'"!="" {
+		foreach v of varlist `permute' {
+			cap assert !mi(`v')
+			if _rc & "`force'"=="" {
+				di as error "permutation variable " as result "`v'" as error " has missing values; specify {bf:force} to override"
+				exit 416
+			}
+			if _rc & "`force'"!="" {
+				di as error "Warning: permutation variable " as result "`v'" as error " has missing values" _n
+			}
+		}
+	}
+	
+	* Permute program option (default is _shuffle)
+	if `"`permuteprogram'"'!="" {
+
+		if "`permute'"=="" {
+			di as error "permute() required when specifying permuteprogram()"
+			exit 198
+		}
+	
+		* Split out cmd name and cmd options
+		gettoken permutecmd 0: permuteprogram, parse(" ,")
+		syntax [, *]
+		local permutecmd_options `"`options'"'
+		
+		* Confirm valid program was passed as argument
+		cap which `permute_cmd'
+		if !_rc {
+			qui program list `program_name'
+		}
+	}
+	else local permutecmd _shuffle
+
 	* Detail options
 	if "`detail'"!="" & "`resampling'"=="noresampling" {
 		di as error "cannot specify both the detail and noresampling options"
@@ -447,9 +479,14 @@ program define wyoung, rclass
 	}
 
 	* Issue error if user is estimating a model with clustered standard errors AND did not specify a resampling cluster (unless force option specified)
-	if "`vce_cluster'"=="1" & mi("`cluster'") & mi("`force'") {
+	if "`vce_cluster'"=="1" & mi("`cluster'") {
+		if mi("`force'") {
 			di as error "estimating model with clustered standard errors, but {bf:cluster()} option was not specified; specify {bf:force} to override"
 			exit 198
+		}
+		else {
+			di as error "Warning: estimating model with clustered standard errors, but {bf:cluster()} option was not specified" _n
+		}
 	}
 
 	preserve
@@ -467,7 +504,9 @@ program define wyoung, rclass
 **** // START NEW CODE
 			* Do a permutation, OR draw a random sample with replacement
 			if "`permute'"!="" {
-				_shuffle `permute', `strata_option' `cluster_option'
+				
+				* Default permute program is _shuffle
+				`permutecmd' `permute', `strata_option' `cluster_option' `permutecmd_options' 
             }
             else {
                 bsample, `strata_option' `cluster_option' `idcluster_option'

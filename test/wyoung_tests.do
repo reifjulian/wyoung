@@ -1,9 +1,9 @@
 local linesize = c(linesize)
+adopath ++ "../src"
 cscript wyoung adofile wyoung
 set linesize `linesize'
 
 clear
-adopath ++ "../src"
 version 18
 set more off
 set tracedepth 1
@@ -42,8 +42,8 @@ expand 100
 set seed 21
 gen clvar = mod(_n,100)
 bysort clvar: gen byte t = round(uniform()) if _n==1
-by clvar: egen foreigncl = mean(t)
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length foreigncl, cluster(clvar)) cluster(clvar) permute(foreigncl) familyp(foreigncl) reps(100) seed(20) replace
+by clvar: egen treat = mean(t)
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length treat, cluster(clvar)) cluster(clvar) permute(treat) familyp(treat) reps(100) seed(20) replace
 ren p* p*_test
 merge 1:1 k using "compare/permute3.dta", assert(match) nogenerate
 foreach v in p pwyoung pbonf psidak {
@@ -55,6 +55,51 @@ sysuse auto, clear
 gen clusterid = mod(_n,10)
 rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) cluster(clusterid) replace
 assert _rc==9
+
+
+* Custom program (replicates permute1 example)
+cap program drop myshuffle
+program define myshuffle
+
+	syntax varname [, *]
+	tempvar randsort shuffled n_init
+	
+	gen long `n_init' = _n
+	gen double `randsort' = uniform()
+	sort `randsort', stable
+	gen `shuffled' = `varlist'[`n_init']
+	
+	drop `varlist'
+	ren `shuffled' `varlist'	
+end
+
+sysuse auto, clear
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) permuteprogram(myshuffle) replace
+cf _all using "compare/permute1.dta"
+
+* Irrelevant options are ok
+sysuse auto, clear
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) permuteprogram("myshuffle, options") replace
+cf _all using "compare/permute1.dta"
+
+
+* Non-existant program produces error
+sysuse auto, clear
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) permuteprogram(myshuffle2) replace
+assert _rc==199
+
+* Not specifying permute() produces error
+sysuse auto, clear
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permuteprogram(myshuffle) replace
+assert _rc==198
+
+* Missing values produces error, unless force is specified
+sysuse auto, clear
+replace foreign = . in 5/10
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(5) seed(20) permute(foreign) 
+assert _rc==416
+
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(5) seed(20) permute(foreign) force
 
 *********************************************
 * Example 1
@@ -166,7 +211,7 @@ cf outcome familyp pwyoung using "compare/examp_areg.dta"
 * Invalid seeds should generate a syntax error
 sysuse auto, clear
 rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR weight length) familyp(weight) reps(10) seed(x)
-assert _rc==198
+assert _rc==121
 
 * For main syntax, "OUTCOMEVAR" must be present
 sysuse auto, clear
