@@ -101,6 +101,26 @@ assert _rc==416
 
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(5) seed(20) permute(foreign) force
 
+* Permuting a row vector (for dummy vars, can be done two different ways)
+sysuse auto, clear
+set seed 11
+gen fvar = floor(uniform()*3)
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length i.fvar") familyp("1.fvar 2.fvar") reps(100) seed(20) permute(fvar) replace
+save "compare/permute4.dta", replace
+cf _all using "compare/permute4.dta"
+
+sysuse auto, clear
+set seed 11
+gen fvar = floor(uniform()*3)
+gen treat1 = fvar==1
+gen treat2 = fvar==2
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length treat1 treat2") familyp("treat1 treat2") reps(100) seed(20) permute(treat1 treat2) replace
+ren p* p*_test
+merge 1:1 k using "compare/permute4.dta", assert(match) nogenerate
+foreach v in p pwyoung pbonf psidak {
+	assert abs(`v'-`v'_test)<0.000001
+}
+
 *********************************************
 * Example 1
 *********************************************

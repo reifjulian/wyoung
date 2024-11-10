@@ -1,5 +1,5 @@
-*! wyoung 2.0 6nov2024 by Julian Reif
-* 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. fixed factor variables bug. TO DO: update help file and github examples
+*! wyoung 2.0 9nov2024 by Julian Reif
+* 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. fixed factor variables bug. TO DO: update help file and github, remove "Running beta" text.
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
 * 1.3.1: new controls option functionality. old functionality moved to controlsinteract
@@ -25,7 +25,7 @@ program define wyoung, rclass
 
 	* Syntax 1: one model with multiple outcomes (and possibly multiple controls and subgroups)
 	noi di in green "NOTE: Running beta (permute) version of wyoung" _n
-	syntax [varlist(default=none)], cmd(string) familyp(string) [Reps(numlist int max=1 >0) BOOTstraps(numlist int max=1 >0) weights(varlist) noRESAMPling seed(numlist max=1) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp permute(varname) PERMUTEProgram(string) replace]
+	syntax [varlist(default=none)], cmd(string) familyp(string) [Reps(numlist int max=1 >0) BOOTstraps(numlist int max=1 >0) weights(varlist) noRESAMPling seed(numlist max=1) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp permute(varlist) PERMUTEProgram(string) replace]
 
 	local outcome_vars "`varlist'"
 	
@@ -107,7 +107,7 @@ program define wyoung, rclass
 		}
 	}
 	
-	* Permute program option (default is _shuffle)
+	* Permute program option (default is _wyoung_shuffle)
 	if `"`permuteprogram'"'!="" {
 
 		if "`permute'"=="" {
@@ -126,7 +126,7 @@ program define wyoung, rclass
 			qui program list `program_name'
 		}
 	}
-	else local permutecmd _shuffle
+	else local permutecmd _wyoung_shuffle
 
 	* Detail options
 	if "`detail'"!="" & "`resampling'"=="noresampling" {
@@ -253,7 +253,7 @@ program define wyoung, rclass
 		local num_familypvars = 1
 		if "`familypexp'"=="" {
 **** // START NEW CODE
-			_fvexpandnobase `familyp'
+			_wyoung_fvexpandnobase `familyp'
 			local familyp `r(varlist)'
 **** // END NEW CODE			
 			local num_familypvars : word count `familyp'
@@ -505,7 +505,7 @@ program define wyoung, rclass
 			* Do a permutation, OR draw a random sample with replacement
 			if "`permute'"!="" {
 				
-				* Default permute program is _shuffle
+				* Default permute program is _wyoung_shuffle
 				`permutecmd' `permute', `strata_option' `cluster_option' `permutecmd_options' 
             }
             else {
@@ -690,13 +690,12 @@ program define wyoung, rclass
 end
 
 
-* TO DO: Enforce constant treatment and strata within the cluster. Handle missing values for permute variable. rename _shuffle to avoid namespace conflicts. Does permute var need to be the familyp var? (needs to be in regression at least)
-capture program drop _shuffle
-program define _shuffle
+capture program drop _wyoung_shuffle
+program define _wyoung_shuffle
 
 	syntax varlist(min=1) [, strata(varname) cluster(varname)]
 
-	tempvar randsort clfirst n_init newvar
+	tempvar randsort clfirst n_init
 
 	* If no cluster var is specified, each individual observation will be a "cluster"
 	if "`cluster'"=="" {
@@ -704,28 +703,29 @@ program define _shuffle
 		gen long `cluster' = _n
 	}
 
-	foreach var in `varlist' {
-		
-		* Identify first observation in each cluster
-		sort `strata' `cluster', stable
-		by `strata' `cluster': gen byte `clfirst' = 1 if _n==1		
-		
-		* Within strata, for all first observations within clusters, save their position in the data set
-		sort `strata' `clfirst', stable
-		by `strata' `clfirst': gen long `n_init' = _n if `clfirst'!=.
-		
-		* Reshuffle these first observations within strata, and take the treatment status from the observation which was at this position before
-		gen double `randsort' = runiform()
-		sort `strata' `clfirst' `randsort', stable
+	* Identify first observation in each cluster
+	sort `strata' `cluster', stable
+	by `strata' `cluster': gen byte `clfirst' = 1 if _n==1		
+	
+	* Within strata, for all first observations within clusters, save their position in the data set
+	sort `strata' `clfirst', stable
+	by `strata' `clfirst': gen long `n_init' = _n if `clfirst'!=.
+	
+	* Reshuffle these first observations within strata, and take the treatment status from the observation which was at this position before
+	gen double `randsort' = runiform()
+	sort `strata' `clfirst' `randsort', stable
+	foreach var in `varlist' {		
+		tempvar new`var'
 		local type : type `var'
-		by `strata' `clfirst': gen `type' `newvar' = `var'[`n_init']
-		
-		* Copy treatment status to all observations in the same cluster
-		sort `strata' `cluster' `clfirst', stable
-		by `strata' `cluster': replace `newvar' = `newvar'[_n-1] if mi(`newvar')
-
-		drop `var' `randsort' `clfirst' `n_init'
-		ren `newvar' `var'
+		by `strata' `clfirst': gen `type' `new`var'' = `var'[`n_init']
+	}
+	
+	* Copy treatment status to all observations in the same cluster
+	sort `strata' `cluster' `clfirst', stable
+	foreach var in `varlist' {
+		by `strata' `cluster': replace `new`var'' = `new`var''[_n-1] if mi(`new`var'')
+		drop `var'
+		ren `new`var'' `var'
 	}
 end
 
@@ -743,7 +743,7 @@ gen strata = floor(mod(_n,7))
 drop price-gear_ratio
 gen foreign0 = foreign
 
-_shuffle foreign
+_wyoung_shuffle foreign
 egen sum1 = sum(foreign0)
 egen sum2 = sum(foreign)
 assert sum1==sum2
@@ -752,7 +752,7 @@ gen foreign = foreign0
 
 
 * Stratified shuffle
-_shuffle foreign, strata(strata)
+_wyoung_shuffle foreign, strata(strata)
 sort strata
 by strata: egen sum1 = sum(foreign0)
 by strata: egen sum2 = sum(foreign)
@@ -766,7 +766,7 @@ gen foreigncl0 = foreigncl
 drop t
 preserve
 
-_shuffle foreigncl, cluster(cluster)
+_wyoung_shuffle foreigncl, cluster(cluster)
 bysort cluster: keep if _n==1
 egen sum1 = sum(foreigncl0)
 egen sum2 = sum(foreigncl)
@@ -778,7 +778,7 @@ restore
 bysort cluster: gen byte t = round(uniform()) if _n==1
 by cluster: egen stratacl = mean(t)
 drop t
-_shuffle foreigncl, cluster(cluster) strata(stratacl)
+_wyoung_shuffle foreigncl, cluster(cluster) strata(stratacl)
 bysort cluster: keep if _n==1
 bysort stratacl: egen sum1 = sum(foreigncl0)
 bysort stratacl: egen sum2 = sum(foreigncl)
@@ -787,7 +787,7 @@ assert sum1==sum2
 */
 
 
-program _fvexpandnobase
+program _wyoung_fvexpandnobase
     
 	* Record original setting
 	local fvbase = c(fvbase)
