@@ -13,13 +13,17 @@ help {hi:wyoung}
 {p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help varlist:varlist}{cmd:)}
 [{cmd:subgroup(}{help varname:varname}{cmd:)} {cmd:controls(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)}
 {cmdab:r:eps(}{it:#}{cmd:)} {cmd:seed(}{it:#}{cmd:)} 
-{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
+{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)}
+{cmd:permute(}{help varlist:varlist}{cmd:)} {cmdab:permutep:rogram(}{it:pgmname [, options]}{cmd:)}
+{cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
 
 {p 4 8 2}Syntax 2: multiple hypothesis testing {hline 2} more general but lengthier syntax for specifying different models with multiple outcomes
 
 {p 8 14 2}{cmd:wyoung}, {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} {cmd:familyp("}{it:varname1}{cmd:"} [{cmd:"}{it:varname2}{cmd:"} ...]{cmd:)}
 [{cmd:reps(}{it:#}{cmd:)} {cmd:seed(}{it:#}{cmd:)} 
-{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} {cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
+{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} 
+{cmd:permute(}{help varlist:varlist}{cmd:)} {cmdab:permutep:rogram(}{it:pgmname [, options]}{cmd:)}
+{cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
 
 
 {title:Options}
@@ -77,7 +81,20 @@ This option is required if {it:model} includes clustered standard errors, unless
 See example 3 below.
 
 {p 4 8 2}
-{cmd:force} allows the user to include a model with clustered standard errors without also specifying the {cmd:cluster()} bootstrap option.
+{cmd:permute(}{help varlist:varlist}{cmd:)} instructs {cmd:wyoung} to permute (rerandomize) {it:varlist} instead of drawing a bootstrap sample.
+When {it:varlist} includes more than one variable, those variables are permuted jointly, preserving their relations to each other.
+{it:varlist} is not permitted to include missing values, unless {cmd:force} is specified.
+If {cmd:strata()} is specified, {it:varlist} is permuted within strata.
+If {cmd:cluster()} is specified, permutations are performed treating each cluster as one unit.
+
+{p 4 8 2}
+{cmdab:permutep:rogram(}{it:pgmname [, options]}{cmd:)} instructs {cmd:wyoung} to perform permutations by calling {it:pgmname}, 
+with the {it:varlist} contents of {cmd:permute(}{it:varlist}{cmd:)} passed as the first argument and {it: options} passed as options. 
+By default, {cmd:strata()} and {cmd:cluster()} are also passed as options to {it:pgmname}.
+
+{p 4 8 2}
+{cmd:force} allows the user to include a model with clustered standard errors without also specifying the {cmd:cluster()} bootstrap option,
+and to permute variables with missing values.
 
 {p 4 8 2}
 {cmd:controlsinteract(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} is a variation on {cmd:controls()} that 
