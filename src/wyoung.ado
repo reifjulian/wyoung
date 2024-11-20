@@ -49,12 +49,12 @@ program define wyoung, rclass
 	******	
 
 	* N = number of bootstraps/permutations (default=100). Provide legacy support for bootstraps() option.
-	if "`reps'`bootstraps'"=="" local reps=100
-	if "`reps'"=="" local reps `bootstraps'
 	if "`reps'"!="" & "`bootstraps'"!="" {
 		di as error "cannot specify both reps() and bootstraps()"
 		exit 198
 	}
+	if "`reps'"=="" local reps `bootstraps'
+	if "`reps'`bootstraps'"=="" local reps=100	
 	local N = `reps'
 	
 	* Seed option

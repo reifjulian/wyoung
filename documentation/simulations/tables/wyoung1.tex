@@ -5,16 +5,18 @@
 \begin{document}
 
 \begin{table}[tbp] \centering
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
 \newcolumntype{C}{>{\centering\arraybackslash}X}
 
 \caption{Family-wise rejection proportions at \(\alpha = 0.05\)}
 \label{tab:wyoung1}
-\begin{tabularx}{\textwidth}{lCCCC}
+\begin{tabularx}{\linewidth}{@{}lCCCC@{}}
 
 \toprule
-&{(1)}&{(2)}&{(3)}&{(4)} \tabularnewline
+&{(1)}&{(2)}&{(3)}&{(4)} \tabularnewline \midrule
 {Adjustment method}&{Normal errors}&{Multiple subgroups}&{Correlated errors}&{Lognormal errors} \tabularnewline
-\midrule\addlinespace[1.5ex]
+\midrule \addlinespace[\belowrulesep]
 Unadjusted&0.398&0.387&0.685&0.577 \tabularnewline
 Bonferroni-Holm&0.040&0.047&0.344&0.234 \tabularnewline
 Sidak-Holm&0.040&0.051&0.347&0.237 \tabularnewline
@@ -22,11 +24,9 @@ Westfall-Young&0.041&0.045&0.513&0.058 \tabularnewline
 \midrule Num. observations&100&100&100&100 \tabularnewline
 Num. hypotheses&10&10&10&10 \tabularnewline
 Hypotheses are true&Y&Y&N&Y \tabularnewline
-\bottomrule \addlinespace[1.5ex]
+\bottomrule \addlinespace[\belowrulesep]
 
 \end{tabularx}
-\begin{flushleft}
-\footnotesize Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. All hypotheses are true for the simulations reported in columns (1), (2), and (4), i.e., lower rejection rates are better. All hypotheses are false for the simulation reported in column (3), i.e., higher rejection rates are better. The Westfall-Young correction is performed using 1,000 bootstraps.
-\end{flushleft}
+\\ \parbox{\linewidth}{\footnotesize Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. All hypotheses are true for the simulations reported in columns (1), (2), and (4), i.e., lower rejection rates are better. All hypotheses are false for the simulation reported in column (3), i.e., higher rejection rates are better. The Westfall-Young correction is performed using 1,000 bootstraps.}
 \end{table}
 \end{document}

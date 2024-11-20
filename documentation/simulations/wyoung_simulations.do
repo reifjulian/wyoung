@@ -21,7 +21,7 @@
 *********************************************************************************************************************
 clear
 adopath ++ "../../src"
-version 16
+version 18
 set more off
 program drop _all
 tempfile results t
@@ -36,14 +36,13 @@ cap mkdir "`tbldir'"
 
 local NSIM  = 2000
 local NBOOT = 1000
-
 local NOBS  = 100
 
 ***********************************
 * Run simulations for each scenario
 ***********************************
 
-qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "lincom" "nlcom" "multiplefamilyp" {
+qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "lincom" "nlcom" "multiplefamilyp" "permute" "permute-sharpnull" {
 
 	set seed 20
 
@@ -196,7 +195,48 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "linc
 				gen y_`y' = e_`y'
 			}
 			wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR treat1 treat2") familyp(treat1 treat2) singlestep replace
-		}		
+		}
+		
+		***
+		* Permutation
+		***		
+		if "`scen'"=="permute" {
+			gen treat = round(runiform())
+			qui forval y = 1/10 {		
+				gen e_`y' = rnormal(0,1)
+				gen y_`y' = e_`y'
+			}
+			
+			preserve
+				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR treat") familyp(treat) singlestep replace
+				save "`t'", replace
+			restore
+				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR treat") familyp(treat) permute(treat) singlestep replace
+				drop coef stderr p pbonf* psidak*
+				ren pwy* pwy*_permute
+				merge 1:1 k model outcome familyp using "`t'", assert(match) nogenerate
+		}
+		
+		* Average treatment effect = E[\beta] = 0, but sharp null is rejected
+		if "`scen'"=="permute-sharpnull" {
+
+			gen treat = round(runiform())
+			gen beta = 0.2
+			replace beta = -beta if mod(_n,2)==1		
+			qui forval y = 1/10 {		
+				gen e_`y' = rnormal(0,1)
+				gen y_`y' = e_`y' + beta*treat
+			}
+
+			preserve
+				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR treat") familyp(treat) singlestep replace
+				save "`t'", replace
+			restore
+				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR treat") familyp(treat) permute(treat) singlestep replace
+				drop coef stderr p pbonf* psidak*
+				ren pwy* pwy*_permute
+				merge 1:1 k model outcome familyp using "`t'", assert(match) nogenerate
+		}			
 
 		***
 		* Save results for each simulation
@@ -209,13 +249,12 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "linc
 	}
 	
 	* Output results scenario-by-scenario
-	gen NOBS  = `NOBS'
+	gen NOBS = `NOBS'
 	gen NSIM = `NSIM'
 	gen NBOOT = `NBOOT'
 	compress
 	save "`outdir'/simulation_`scen'.dta", replace
 }
-
 
 ***********************************
 * Calculate family-wise error rates for Table 1
@@ -443,4 +482,79 @@ label var multiplefamilyp "Multiple regressors"
 local fn "Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, i.e., lower rejection rates are better. Section \ref{SS-multiple regressors} describes the data-generating process used in Column (1). Section \ref{SS-combination} describes the data-generating process used in Columns (2) and (3). The Westfall-Young correction is performed using 1,000 bootstraps."
 texsave using "`tbldir'/wyoung3.tex", hlines(-2) autonumber nofix marker("tab:wyoung3") title("Family-wise rejection proportions at \(\alpha = 0.05\), when testing hypotheses with multiple regressors or restrictions") footnote("`fn'") varlabels replace
 
+
+***********************************
+* Table 4 (permutation)
+***********************************
+use "`outdir'/simulation_permute.dta", clear
+gen scenario = "permute"
+append using "`outdir'/simulation_permute-sharpnull.dta"
+replace scenario = "sharpnull" if mi(scenario)
+
+* Flag hypotheses that are rejected at alpha = 0.05
+foreach v in p pwyoung pwyoung_permute psidak pbonf {
+	assert inrange(`v',0,1)
+	gen `v'_05 = `v'<.05
+}
+
+* Family-wise error rate: probability of rejecting 1 (or more) hypotheses out of this family of 10 hypotheses
+collapse (max) *_05, by(sim scenario) fast
+
+* Calculate what proportion of the time this happens
+collapse (mean) *_*, by(scenario) fast
+list
+
+***
+* Format and output LaTeX -- put bootstrap/permute in 1 column, and sharpnulls in second column
+***
+
+gen dummy=1
+preserve
+	foreach v in pwyoung_permute_05 pwyoung_05 psidak_05 pbonf_05 p_05 {
+		keep `v' dummy scenario
+		reshape wide `v', i(dummy) j(scenario) str
+		rename `v'* *
+		gen var = "`v'"
+		if "`v'"!="pwyoung_permute_05" append using "`t'"
+		save "`t'", replace
+		restore, preserve
+	}
+restore, not
+
+use "`t'", clear
+drop dummy
+order var permute sharpnull
+
+replace var = "Unadjusted"      if var=="p_05"
+replace var = "Bonferroni"      if var=="pbonf1_05"
+replace var = "Bonferroni-Holm" if var=="pbonf_05"
+replace var = "Sidak-Holm"      if var=="psidak_05"
+replace var = "Westfall-Young (bootstrap)"  if var=="pwyoung_05"
+replace var = "Westfall-Young (permutation)"  if var=="pwyoung_permute_05"
+
+set obs `=_N+4'
+replace var = "Num. observations"   if _n==_N-3
+replace var = "Num. hypotheses"     if _n==_N-2
+replace var = "Null is true"        if _n==_N-1
+replace var = "Sharp null is true"  if _n==_N
+
+foreach v of varlist permute sharpnull {
+	replace `v' = 10  if var=="Num. hypotheses"
+	replace `v' = 100 if var=="Num. observations"
+	
+	tostring `v', replace force format(%12.3fc)
+	replace `v' = subinstr(`v',".000","",1)
+
+	replace `v' = "X" if var=="Null is true" & inlist("`v'","permute")
+	replace `v' = "X" if var=="Sharp null is true"
+	replace `v' = "" if `v'=="."
+}
+
+label var permute "Permute"
+label var sharpnull "Sharp null"
+
+local fn "Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, i.e., lower rejection rates are better. The Westfall-Young correction is performed using 1,000 bootstraps."
+texsave using "`tbldir'/wyoung4.tex", hlines(-4) autonumber nofix marker("tab:wyoung4") title("Family-wise rejection proportions at \(\alpha = 0.05\), when using permutation") footnote("`fn'") varlabels replace
+
 ** EOF
+
