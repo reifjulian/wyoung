@@ -13,23 +13,23 @@ help {hi:wyoung}
 {p 8 14 2}{cmd:wyoung} {help varlist:varlist}, {cmd:cmd(}{it:model}{cmd:)} {cmd:familyp(}{help varlist:varlist}{cmd:)}
 [{cmd:subgroup(}{help varname:varname}{cmd:)} {cmd:controls(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)}
 {cmdab:r:eps(}{it:#}{cmd:)} {cmd:seed(}{it:#}{cmd:)} 
-{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)}
 {cmd:permute(}{help varlist:varlist}{cmd:)} {cmdab:permutep:rogram(}{it:pgmname [, options]}{cmd:)}
-{cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
+{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)}
+{cmd:force} {cmdab:single:step} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
 
 {p 4 8 2}Syntax 2: multiple hypothesis testing {hline 2} more general but lengthier syntax for specifying different models with multiple outcomes
 
 {p 8 14 2}{cmd:wyoung}, {cmd:cmd("}{it:model1}{cmd:"} [{cmd:"}{it:model2}{cmd:"} ...]{cmd:)} {cmd:familyp("}{it:varname1}{cmd:"} [{cmd:"}{it:varname2}{cmd:"} ...]{cmd:)}
-[{cmd:reps(}{it:#}{cmd:)} {cmd:seed(}{it:#}{cmd:)} 
-{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} 
+[{cmdab:r:eps(}{it:#}{cmd:)} {cmd:seed(}{it:#}{cmd:)} 
 {cmd:permute(}{help varlist:varlist}{cmd:)} {cmdab:permutep:rogram(}{it:pgmname [, options]}{cmd:)}
-{cmd:force} {cmd:singlestep} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
+{cmd:strata(}{help varlist:varlist}{cmd:)} {cmd:cluster(}{help varlist:varlist}{cmd:)} 
+{cmd:force} {cmdab:single:step} {cmd:detail} {cmd:noresampling} {cmd:familypexp} {cmd:replace}]
 
 
 {title:Options}
 
 {p 4 8 2}
-{cmd:cmd(}{cmd:)}, {cmd:familyp(}{cmd:)}
+{cmd:cmd(}{cmd:)}, {cmd:familyp(}{cmd:)}, {cmd:subgroup(}{cmd:)}, {cmd:controls(}{cmd:)}
 
 {p 8 8 2} Syntax 1: one model with multiple outcomes (see example 1 below)
 
@@ -53,6 +53,13 @@ The control variables are indicated in {it:model} by "CONTROLVARS" (upper case).
 For the first outcome variable, {cmd:wyoung} will substitute {it:varlist1} into "CONTROLVARS", for the second outcome it will
 substitute {it:varlist2}, and so on. See example 7 below.
 
+{p 12 12 12}
+{cmd:controlsinteract(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} is an alternative to {cmd:controls()} that 
+estimates the model separately for all pairwise combinations of outcome variables and specified controls.
+Each set of controls will be substituted into "CONTROLVARS" as specified in {it:model}.
+Specifying {it:N} different sets of controls ({it:varlist1}, {it:varlist2}, ..., {it:varlistN}) will multiply 
+the number of hypotheses being tested by {it:N}. See example 8 below.
+
 {p 8 8 2} Syntax 2: different models with multiple outcomes (see example 2 below)
 
 {p 12 12 2}
@@ -72,11 +79,11 @@ If only one {it:varname} is specified, {cmd:wyoung} applies it to all {it:model}
 {cmd:. set seed} {it:#}
 
 {p 4 8 2}
-{cmd:strata(}{help varlist:varlist}{cmd:)} specifies variables identifying strata. If {cmd:strata()} is specified, bootstrap/permutation samples are selected within each stratum.
+{cmd:strata(}{help varlist:varlist}{cmd:)} specifies variables that identify identify strata. If {cmd:strata()} is specified, bootstrap/permutation samples are selected within each stratum.
 
 {p 4 8 2}
-{cmd:cluster(}{help varlist:varlist}{cmd:)} specifies variables identifying clusters.  
-If {cmd:cluster()} is specified, the sample drawn during each replication is a bootstrap sample of clusters.
+{cmd:cluster(}{help varlist:varlist}{cmd:)} specifies variables that identify clusters.  
+If {cmd:cluster()} is specified, the bootsrap/permutation samples are selected treating each cluster, as defined by {it:varlist}, as one unit of assignment.
 This option is required if {it:model} includes clustered standard errors, unless {cmd:force} is specified.
 See example 3 below.
 
@@ -96,15 +103,9 @@ By default, {cmd:strata()} and {cmd:cluster()} are also passed as options to {it
 {cmd:force} allows the user to include a model with clustered standard errors without also specifying the {cmd:cluster()} bootstrap option,
 and to permute variables with missing values.
 
-{p 4 8 2}
-{cmd:controlsinteract(}"{help varlist:varlist1}" ["{help varlist:varlist2}" ...]{cmd:)} is a variation on {cmd:controls()} that 
-will estimate the model separately for all pairwise combinations of outcome variables and specified controls.
-Each set of controls will be substituted into "CONTROLVARS" as specified in {it:model}.
-Specifying {it:N} different sets of controls ({it:varlist1}, {it:varlist2}, ..., {it:varlistN}) will multiply 
-the number of hypotheses being tested by {it:N}. See example 8 below.
 
 {p 4 8 2}
-{cmd:singlestep} computes the single-step adjusted {it:p}-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their
+{cmdab:single:step} computes the single-step adjusted {it:p}-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their
 step-down counterparts also control the type III error rate is unknown (Westfall and Young 1993, p. 51).
 
 {p 4 8 2}

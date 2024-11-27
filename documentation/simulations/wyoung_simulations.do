@@ -42,7 +42,7 @@ local NOBS  = 100
 * Run simulations for each scenario
 ***********************************
 
-qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "lincom" "nlcom" "multiplefamilyp" "permute" "permute-sharpnull" {
+qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "lincom" "nlcom" "multiplefamilyp" "permute" "permutestrata"  "permutecluster" {
 
 	set seed 20
 
@@ -63,7 +63,7 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "linc
 			}
 			wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR x") familyp(x) singlestep replace
 		}
-		
+
 		***
 		* Subgroups
 		***
@@ -207,27 +207,91 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "linc
 				gen y_`y' = e_`y'
 			}
 			
+			local current_seed "`c(seed)'"
 			preserve
 				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR treat") familyp(treat) singlestep replace
 				save "`t'", replace
 			restore
+				set seed `current_seed'
 				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR treat") familyp(treat) permute(treat) singlestep replace
 				drop coef stderr p pbonf* psidak*
 				ren pwy* pwy*_permute
 				merge 1:1 k model outcome familyp using "`t'", assert(match) nogenerate
 		}
 		
-		* Average treatment effect = E[\beta] = 0, but sharp null is rejected
-		if "`scen'"=="permute-sharpnull" {
+		* Stratified randomization
+		if "`scen'"=="permutestrata" {
+
+			* 10 strata, 50% treated in each strata
+			gen strata = mod(_n,10)
+			gen double rand = rnormal()
+			sort strata rand
+			by strata: gen byte treat = _n<=5
+
+			qui forval y = 1/10 {		
+				gen e_`y' = rnormal(0,1)
+				gen y_`y' = e_`y'
+			}
+
+			local current_seed "`c(seed)'"
+			preserve
+				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR treat") familyp(treat) strata(strata) singlestep replace
+				save "`t'", replace
+			restore
+				set seed `current_seed'
+				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR treat") familyp(treat) permute(treat) strata(strata) singlestep replace
+				drop coef stderr p pbonf* psidak*
+				ren pwy* pwy*_permute
+				merge 1:1 k model outcome familyp using "`t'", assert(match) nogenerate
+		}
+		
+		***
+		* Clustered errors: treatment assignment is at the panel level, 10 observations per panel
+		***
+		if "`scen'"=="permutecluster" {
+
+			gen clusterid = _n
+			gen treat = round(runiform())
+			
+			* Cluster fixed effect
+			qui forval y = 1/10 {		
+				gen cluster_fe_`y' = rnormal(0,1)
+			}
+			
+			* Each cluster i has 10 units j
+			expand 10
+	
+			* y_ij = gamma_i + e_ij
+			qui forval y = 1/10 {		
+				gen e_`y' = rnormal(0,1)			
+				gen y_`y' = cluster_fe_`y' + e_`y'
+			}
+			
+			local current_seed "`c(seed)'"
+			preserve
+				wyoung y_*, reps(`NBOOT') cmd("_regress OUTCOMEVAR treat, cluster(clusterid)") familyp(treat) singlestep replace cluster(clusterid)
+				save "`t'", replace
+			restore
+				set seed `current_seed'
+				wyoung y_*, reps(`NBOOT') cmd("_regress OUTCOMEVAR treat, cluster(clusterid)") familyp(treat) permute(treat) cluster(clusterid) singlestep replace
+				drop coef stderr p pbonf* psidak*
+				ren pwy* pwy*_permute
+				merge 1:1 k model outcome familyp using "`t'", assert(match) nogenerate				
+		}		
+		
+		* Average treatment effect = E[\beta] = 0, but sharp null is false (not used)
+		if "`scen'"=="permutesharpnull" {
+
+			* Expand to 1,000 obs to achieve sufficient power
+			expand 10
 
 			gen treat = round(runiform())
-			gen beta = 0.2
+			gen beta = 10
 			replace beta = -beta if mod(_n,2)==1		
 			qui forval y = 1/10 {		
 				gen e_`y' = rnormal(0,1)
 				gen y_`y' = e_`y' + beta*treat
 			}
-
 			preserve
 				wyoung y_*, bootstraps(`NBOOT') cmd("_regress OUTCOMEVAR treat") familyp(treat) singlestep replace
 				save "`t'", replace
@@ -236,7 +300,9 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "linc
 				drop coef stderr p pbonf* psidak*
 				ren pwy* pwy*_permute
 				merge 1:1 k model outcome familyp using "`t'", assert(match) nogenerate
-		}			
+		}		
+		
+		
 
 		***
 		* Save results for each simulation
@@ -255,6 +321,7 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "linc
 	compress
 	save "`outdir'/simulation_`scen'.dta", replace
 }
+
 
 ***********************************
 * Calculate family-wise error rates for Table 1
@@ -334,7 +401,7 @@ label var subgroup "Multiple subgroups"
 label var lognormal "Lognormal errors"
 label var simulation_correlated "Correlated errors"
 
-local fn "Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. All hypotheses are true for the simulations reported in columns (1), (2), and (4), i.e., lower rejection rates are better. All hypotheses are false for the simulation reported in column (3), i.e., higher rejection rates are better. The Westfall-Young correction is performed using 1,000 bootstraps."
+local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. All hypotheses are true for the simulations reported in columns (1), (2), and (4), i.e., lower rejection rates are better. All hypotheses are false for the simulation reported in column (3), i.e., higher rejection rates are better. The Westfall-Young correction is applied using 1,000 bootstraps."
 texsave using "`tbldir'/wyoung1.tex", hlines(-3) autonumber nofix marker("tab:wyoung1") title("Family-wise rejection proportions at \(\alpha = 0.05\)") footnote("`fn'") varlabels replace
 
 
@@ -409,7 +476,7 @@ label var v_iid_b_standard "(1)"
 label var v_cluster_b_standard "(2)"
 label var v_cluster_b_cluster "(3)"
 
-local fn "Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. The difference between columns (1) and (2) is the assumption about the standard errors (homoskedastic or clustered). The difference between columns (2) and (3) is the method of bootstrapping (resampling over individual observations versus clusters), which matters only for the Westfall-Young correction. All null hypotheses are true, i.e., lower rejection rates are better. Each simulation generated 100 panels (clusters) with 10 time periods. The Westfall-Young correction is performed using 1,000 bootstraps."
+local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. The difference between columns (1) and (2) is the assumption about the standard errors (homoskedastic or clustered). The difference between columns (2) and (3) is the method of bootstrapping (resampling over individual observations versus clusters), which matters only for the Westfall-Young correction. All null hypotheses are true, so lower rejection rates indicate better performance. Each simulation generated 100 panels (clusters) with 10 time periods. The Westfall-Young correction is applied using 1,000 bootstraps."
 texsave using "`tbldir'/wyoung2.tex", hlines(-4) nofix marker("tab:wyoung2") title("Family-wise rejection proportions at \(\alpha = 0.05\), when the data generating process is serially correlated") footnote("`fn'") varlabels replace
 
 ***********************************
@@ -479,7 +546,7 @@ label var linear "Linear restriction"
 label var nonlinear "Nonlinear restriction"
 label var multiplefamilyp "Multiple regressors"
 
-local fn "Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, i.e., lower rejection rates are better. Section \ref{SS-multiple regressors} describes the data-generating process used in Column (1). Section \ref{SS-combination} describes the data-generating process used in Columns (2) and (3). The Westfall-Young correction is performed using 1,000 bootstraps."
+local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, so lower rejection rates indicate better performance. Section \ref{SS-multiple regressors} describes the data-generating process used in Column (1). Section \ref{SS-combination} describes the data-generating process used in Columns (2) and (3). The Westfall-Young correction is applied using 1,000 bootstraps."
 texsave using "`tbldir'/wyoung3.tex", hlines(-2) autonumber nofix marker("tab:wyoung3") title("Family-wise rejection proportions at \(\alpha = 0.05\), when testing hypotheses with multiple regressors or restrictions") footnote("`fn'") varlabels replace
 
 
@@ -488,8 +555,10 @@ texsave using "`tbldir'/wyoung3.tex", hlines(-2) autonumber nofix marker("tab:wy
 ***********************************
 use "`outdir'/simulation_permute.dta", clear
 gen scenario = "permute"
-append using "`outdir'/simulation_permute-sharpnull.dta"
-replace scenario = "sharpnull" if mi(scenario)
+append using "`outdir'/simulation_permutestrata.dta"
+replace scenario = "strata" if mi(scenario)
+append using "`outdir'/simulation_permutecluster.dta"
+replace scenario = "cluster" if mi(scenario)
 
 * Flag hypotheses that are rejected at alpha = 0.05
 foreach v in p pwyoung pwyoung_permute psidak pbonf {
@@ -523,7 +592,7 @@ restore, not
 
 use "`t'", clear
 drop dummy
-order var permute sharpnull
+order var permute strata cluster
 
 replace var = "Unadjusted"      if var=="p_05"
 replace var = "Bonferroni"      if var=="pbonf1_05"
@@ -532,29 +601,31 @@ replace var = "Sidak-Holm"      if var=="psidak_05"
 replace var = "Westfall-Young (bootstrap)"  if var=="pwyoung_05"
 replace var = "Westfall-Young (permutation)"  if var=="pwyoung_permute_05"
 
-set obs `=_N+4'
-replace var = "Num. observations"   if _n==_N-3
-replace var = "Num. hypotheses"     if _n==_N-2
-replace var = "Null is true"        if _n==_N-1
-replace var = "Sharp null is true"  if _n==_N
+set obs `=_N+3'
+replace var = "Num. observations"   if _n==_N-2
+replace var = "Num. hypotheses"     if _n==_N-1
+replace var = "Random assignment"   if _n==_N
 
-foreach v of varlist permute sharpnull {
+foreach v of varlist permute strata cluster {
 	replace `v' = 10  if var=="Num. hypotheses"
-	replace `v' = 100 if var=="Num. observations"
+	replace `v' = 100 if var=="Num. observations" & inlist("`v'","permute","strata")
+	replace `v' = 1000 if var=="Num. observations" & inlist("`v'","cluster")
 	
 	tostring `v', replace force format(%12.3fc)
 	replace `v' = subinstr(`v',".000","",1)
 
-	replace `v' = "X" if var=="Null is true" & inlist("`v'","permute")
-	replace `v' = "X" if var=="Sharp null is true"
 	replace `v' = "" if `v'=="."
+	replace `v' = "Individual"  if var=="Random assignment" & "`v'"=="permute"
+	replace `v' = "Stratified"  if var=="Random assignment" & "`v'"=="strata"	
+	replace `v' = "Clustered"  if var=="Random assignment" & "`v'"=="cluster"
 }
 
 label var permute "Permute"
-label var sharpnull "Sharp null"
+label var strata "Stratified randomization"
+label var cluster "Clustered randomization"
 
-local fn "Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, i.e., lower rejection rates are better. The Westfall-Young correction is performed using 1,000 bootstraps."
-texsave using "`tbldir'/wyoung4.tex", hlines(-4) autonumber nofix marker("tab:wyoung4") title("Family-wise rejection proportions at \(\alpha = 0.05\), when using permutation") footnote("`fn'") varlabels replace
+local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, so lower rejection rates indicate better performance. The Westfall-Young corrections are applied using 1,000 bootstraps/permutations. In column (1), individuals are randomly assigned to treatment with a probability of 0.5. In column (2), assignment is stratified into 10 equally sized strata. In column (3), treatment is assigned at the cluster level, with 100 clusters of 10 observations each."
+texsave using "`tbldir'/wyoung4.tex", hlines(-4) autonumber nofix marker("tab:wyoung4") title("Family-wise rejection proportions at \(\alpha = 0.05\), when treatment is randomly assigned") footnote("`fn'") varlabels replace
 
 ** EOF
 

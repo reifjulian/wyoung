@@ -1,4 +1,4 @@
-*! wyoung 2.0 9nov2024 by Julian Reif
+*! wyoung 2.0 21nov2024 by Julian Reif
 * 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. fixed factor variables bug. TO DO: update help file and github, remove "Running beta" text.
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
@@ -173,6 +173,12 @@ program define wyoung, rclass
 		di as error "cannot have {it:CONTROLVARS} without specifying option {cmd:controls()} or {cmd:controlsinteract()}"
 		exit 198		
 	}	
+	
+	* Cannot specify both CONTROLS and CONTROLVARS
+	if (`"`controlsinteract'"'!="" & `"`controls'"'!="") {
+		di as error "cannot specify both {cmd:controls()} and {cmd:controlsinteract()}"
+		exit 198
+	}
 	
 	* Controlsinteract option (multiplies number of hypotheses being tested)
 	local num_sets_controls = 1

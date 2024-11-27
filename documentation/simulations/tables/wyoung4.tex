@@ -9,26 +9,25 @@
 \newcolumntype{L}{>{\raggedright\arraybackslash}X}
 \newcolumntype{C}{>{\centering\arraybackslash}X}
 
-\caption{Family-wise rejection proportions at \(\alpha = 0.05\), when using permutation}
+\caption{Family-wise rejection proportions at \(\alpha = 0.05\), when treatment is randomly assigned}
 \label{tab:wyoung4}
-\begin{tabularx}{\linewidth}{@{}lCC@{}}
+\begin{tabularx}{\linewidth}{@{}lCCC@{}}
 
 \toprule
-&{(1)}&{(2)} \tabularnewline \midrule
-{}&{Permute}&{Sharp null} \tabularnewline
+&{(1)}&{(2)}&{(3)} \tabularnewline \midrule
+{}&{Permute}&{Stratified randomization}&{Clustered randomization} \tabularnewline
 \midrule \addlinespace[\belowrulesep]
-Unadjusted&0.392&0.388 \tabularnewline
-Bonferroni-Holm&0.051&0.052 \tabularnewline
-Sidak-Holm&0.054&0.054 \tabularnewline
-Westfall-Young (bootstrap)&0.053&0.052 \tabularnewline
-Westfall-Young (permutation)&0.052&0.052 \tabularnewline
-\midrule Num. observations&100&100 \tabularnewline
-Num. hypotheses&10&10 \tabularnewline
-Null is true&X& \tabularnewline
-Sharp null is true&X&X \tabularnewline
+Unadjusted&0.392&0.409&0.391 \tabularnewline
+Bonferroni-Holm&0.051&0.045&0.045 \tabularnewline
+Sidak-Holm&0.054&0.047&0.045 \tabularnewline
+Westfall-Young (bootstrap)&0.053&0.064&0.043 \tabularnewline
+\midrule Westfall-Young (permutation)&0.052&0.048&0.043 \tabularnewline
+Num. observations&100&100&1,000 \tabularnewline
+Num. hypotheses&10&10&10 \tabularnewline
+Random assignment&Individual&Stratified&Clustered \tabularnewline
 \bottomrule \addlinespace[\belowrulesep]
 
 \end{tabularx}
-\\ \parbox{\linewidth}{\footnotesize Notes: Table reports the fraction of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, i.e., lower rejection rates are better. The Westfall-Young correction is performed using 1,000 bootstraps.}
+\\ \parbox{\linewidth}{\footnotesize Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, so lower rejection rates indicate better performance. The Westfall-Young corrections are applied using 1,000 bootstraps/permutations. In column (1), individuals are randomly assigned to treatment with a probability of 0.5. In column (2), assignment is stratified into 10 equally sized strata. In column (3), treatment is assigned at the cluster level, with 100 clusters of 10 observations each.}
 \end{table}
 \end{document}

@@ -106,7 +106,6 @@ sysuse auto, clear
 set seed 11
 gen fvar = floor(uniform()*3)
 wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length i.fvar") familyp("1.fvar 2.fvar") reps(100) seed(20) permute(fvar) replace
-save "compare/permute4.dta", replace
 cf _all using "compare/permute4.dta"
 
 sysuse auto, clear
@@ -322,6 +321,10 @@ rcof noi wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS")
 assert _rc==198
 rcof noi wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" Lweight) reps(50) seed(20) replace
 assert _rc==111
+
+sysuse auto, clear
+rcof noi wyoung mpg headroom, cmd("regress OUTCOMEVAR displacement CONTROLVARS") familyp(displacement) controls("length weight" gear_ratio) controlsinteract("length weight" "gear_ratio") reps(50) seed(20) replace
+assert _rc==198
 
 * Undocumented weights() option 
 use "compare/wellness.dta", clear
