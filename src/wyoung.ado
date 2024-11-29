@@ -1,5 +1,5 @@
 *! wyoung 2.0 21nov2024 by Julian Reif
-* 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. fixed factor variables bug. TO DO: update help file and github, remove "Running beta" text.
+* 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. fixed factor variables bug. TO DO: update help file and github with examples, remove "Running beta" text.
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
 * 1.3.1: new controls option functionality. old functionality moved to controlsinteract
@@ -258,10 +258,8 @@ program define wyoung, rclass
 		* If user specified familypexp (rare), then the input is a single lincom/nlcom expression, not a varlist
 		local num_familypvars = 1
 		if "`familypexp'"=="" {
-**** // START NEW CODE
 			_wyoung_fvexpandnobase `familyp'
 			local familyp `r(varlist)'
-**** // END NEW CODE			
 			local num_familypvars : word count `familyp'
 		}
 
@@ -507,7 +505,6 @@ program define wyoung, rclass
 		***
 		qui forval i = 1/`N' {
 
-**** // START NEW CODE
 			* Do a permutation, OR draw a random sample with replacement
 			if "`permute'"!="" {
 				
@@ -522,7 +519,6 @@ program define wyoung, rclass
 					ren `id_cluster' `cluster'
 				}				
             }
-**** // END NEW CODE
 
 			* Calculate pstar for each model, using test or testnl
 			qui forval k = 1/`K' {
@@ -534,7 +530,6 @@ program define wyoung, rclass
 				}
 				local Ni_`k' = e(N)
 
-**** // START NEW CODE
 				* Under permutation (randomization inference), which breaks link between X and Y, we test the null coef = 0. Under bootstrapping, which preserves link between X and Y, we test coef = original beta
 				if ("`permute'"!="") local complete_null = 0
 				else                 local complete_null = `beta_`k''
@@ -551,7 +546,6 @@ program define wyoung, rclass
 					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `beta_`k''"' as error " on a bootstrap/permutation sample:"					
 					test `familyp_`k'' == `beta_`k''
 				}
-**** // END NEW CODE				
 				local pstar_`k' = r(p)
 			}
 			
@@ -695,8 +689,7 @@ program define wyoung, rclass
 	return local cmd wyoung
 end
 
-
-capture program drop _wyoung_shuffle
+* Default permutation program
 program define _wyoung_shuffle
 
 	syntax varlist(min=1) [, strata(varname) cluster(varname)]
@@ -735,7 +728,7 @@ program define _wyoung_shuffle
 	}
 end
 
-/* EXAMPLE SHUFFLES
+/* EXAMPLE SHUFFLES (QC code)
 
 * Simple shuffle
 set seed 21

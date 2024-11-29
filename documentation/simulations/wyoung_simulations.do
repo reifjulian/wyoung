@@ -219,7 +219,9 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "linc
 				merge 1:1 k model outcome familyp using "`t'", assert(match) nogenerate
 		}
 		
-		* Stratified randomization
+		***
+		* Permutation: stratified randomization
+		***
 		if "`scen'"=="permutestrata" {
 
 			* 10 strata, 50% treated in each strata
@@ -246,7 +248,7 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "linc
 		}
 		
 		***
-		* Clustered errors: treatment assignment is at the panel level, 10 observations per panel
+		* Permutation: clustered random assignment
 		***
 		if "`scen'"=="permutecluster" {
 
@@ -279,7 +281,9 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "linc
 				merge 1:1 k model outcome familyp using "`t'", assert(match) nogenerate				
 		}		
 		
-		* Average treatment effect = E[\beta] = 0, but sharp null is false (not used)
+		***
+		* Permutation: average treatment effect = E[\beta] = 0, but sharp null is false (not used)
+		***
 		if "`scen'"=="permutesharpnull" {
 
 			* Expand to 1,000 obs to achieve sufficient power
@@ -300,8 +304,7 @@ qui foreach scen in "normal" "subgroup" "lognormal" "correlated" "cluster" "linc
 				drop coef stderr p pbonf* psidak*
 				ren pwy* pwy*_permute
 				merge 1:1 k model outcome familyp using "`t'", assert(match) nogenerate
-		}		
-		
+		}
 		
 
 		***
@@ -401,7 +404,7 @@ label var subgroup "Multiple subgroups"
 label var lognormal "Lognormal errors"
 label var simulation_correlated "Correlated errors"
 
-local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. All hypotheses are true for the simulations reported in columns (1), (2), and (4), i.e., lower rejection rates are better. All hypotheses are false for the simulation reported in column (3), i.e., higher rejection rates are better. The Westfall-Young correction is applied using 1,000 bootstraps."
+local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. In the simulations reported in columns (1), (2), and (4), all hypotheses are true, so lower rejection rates indicate better performance. In contrast, for the simulation reported in column (3), all hypotheses are false, so higher rejection rates indicate better performance. The Westfall-Young adjustment is applied using 1,000 bootstraps."
 texsave using "`tbldir'/wyoung1.tex", hlines(-3) autonumber nofix marker("tab:wyoung1") title("Family-wise rejection proportions at \(\alpha = 0.05\)") footnote("`fn'") varlabels replace
 
 
@@ -476,7 +479,7 @@ label var v_iid_b_standard "(1)"
 label var v_cluster_b_standard "(2)"
 label var v_cluster_b_cluster "(3)"
 
-local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. The difference between columns (1) and (2) is the assumption about the standard errors (homoskedastic or clustered). The difference between columns (2) and (3) is the method of bootstrapping (resampling over individual observations versus clusters), which matters only for the Westfall-Young correction. All null hypotheses are true, so lower rejection rates indicate better performance. Each simulation generated 100 panels (clusters) with 10 time periods. The Westfall-Young correction is applied using 1,000 bootstraps."
+local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in a family of 10 hypotheses was rejected. The difference between columns (1) and (2) is the assumption about the standard errors (homoskedastic or clustered). The difference between columns (2) and (3) is the method of bootstrapping (resampling over individual observations versus clusters), which matters only for the Westfall-Young adjustment. All null hypotheses are true, so lower rejection rates indicate better performance. Each simulation generated 100 panels (clusters) with 10 time periods. The Westfall-Young adjustment is applied using 1,000 bootstraps."
 texsave using "`tbldir'/wyoung2.tex", hlines(-4) nofix marker("tab:wyoung2") title("Family-wise rejection proportions at \(\alpha = 0.05\), when the data generating process is serially correlated") footnote("`fn'") varlabels replace
 
 ***********************************
@@ -546,7 +549,7 @@ label var linear "Linear restriction"
 label var nonlinear "Nonlinear restriction"
 label var multiplefamilyp "Multiple regressors"
 
-local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, so lower rejection rates indicate better performance. Section \ref{SS-multiple regressors} describes the data-generating process used in Column (1). Section \ref{SS-combination} describes the data-generating process used in Columns (2) and (3). The Westfall-Young correction is applied using 1,000 bootstraps."
+local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, so lower rejection rates indicate better performance. Section \ref{SS-multiple regressors} describes the data-generating process used in column (1). Section \ref{SS-combination} describes the data-generating process used in columns (2) and (3). The Westfall-Young adjustment is applied using 1,000 bootstraps."
 texsave using "`tbldir'/wyoung3.tex", hlines(-2) autonumber nofix marker("tab:wyoung3") title("Family-wise rejection proportions at \(\alpha = 0.05\), when testing hypotheses with multiple regressors or restrictions") footnote("`fn'") varlabels replace
 
 
@@ -601,10 +604,9 @@ replace var = "Sidak-Holm"      if var=="psidak_05"
 replace var = "Westfall-Young (bootstrap)"  if var=="pwyoung_05"
 replace var = "Westfall-Young (permutation)"  if var=="pwyoung_permute_05"
 
-set obs `=_N+3'
-replace var = "Num. observations"   if _n==_N-2
-replace var = "Num. hypotheses"     if _n==_N-1
-replace var = "Random assignment"   if _n==_N
+set obs `=_N+2'
+replace var = "Num. observations"   if _n==_N-1
+replace var = "Num. hypotheses"     if _n==_N
 
 foreach v of varlist permute strata cluster {
 	replace `v' = 10  if var=="Num. hypotheses"
@@ -620,12 +622,14 @@ foreach v of varlist permute strata cluster {
 	replace `v' = "Clustered"  if var=="Random assignment" & "`v'"=="cluster"
 }
 
-label var permute "Permute"
-label var strata "Stratified randomization"
-label var cluster "Clustered randomization"
+label var var "Adjustment method"
+label var permute "Individual"
+label var strata "Stratified"
+label var cluster "Clustered"
 
-local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, so lower rejection rates indicate better performance. The Westfall-Young corrections are applied using 1,000 bootstraps/permutations. In column (1), individuals are randomly assigned to treatment with a probability of 0.5. In column (2), assignment is stratified into 10 equally sized strata. In column (3), treatment is assigned at the cluster level, with 100 clusters of 10 observations each."
-texsave using "`tbldir'/wyoung4.tex", hlines(-4) autonumber nofix marker("tab:wyoung4") title("Family-wise rejection proportions at \(\alpha = 0.05\), when treatment is randomly assigned") footnote("`fn'") varlabels replace
+local fn "Notes: Table reports the proportion of 2,000 simulations where at least one null hypothesis in the family was rejected. All null hypotheses are true, so lower rejection rates indicate better performance. In column (1), individuals are randomly assigned to treatment with a probability of 0.5. In column (2), assignment is stratified into 10 equally sized strata. In column (3), treatment is assigned at the cluster level, with 100 clusters of 10 observations each. The Westfall-Young adjustments are applied using 1,000 bootstraps/permutations."
+local headerlines `"headerlines2("& \multicolumn{3}{c}{Method of random assignment} \tabularnewline" "\cmidrule{2-4}")"'
+texsave using "`tbldir'/wyoung4.tex", hlines(-2) autonumber nofix marker("tab:wyoung4") title("Family-wise rejection proportions at \(\alpha = 0.05\), when treatment is randomized") footnote("`fn'") varlabels `headerlines' replace
 
 ** EOF
 
