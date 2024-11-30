@@ -1,13 +1,14 @@
 # WYOUNG: control the family-wise error rate when performing multiple hypothesis tests
 
-- Current version: `1.3.3 18jan2024`
+- Current version: `2.0 21nov2024`
 - Jump to: [`overview`](#overview) [`installation`](#installation) [`examples`](#examples) [`update history`](#update-history) [`citation`](#citation) 
 
 -----------
 
 ## Overview: 
 
-`wyoung` is a Stata command that calculates adjusted *p*-values using the free step-down resampling methodology of Westfall and Young (1993). It also computes the Bonferroni-Holm and Sidak-Holm adjusted *p*-values. Algorithm details and simulation test results are documented [here](/documentation/wyoung.pdf).
+`wyoung` is a Stata command designed to calculate adjusted *p*-values using the free step-down resampling method developed by Westfall and Young (1993). In addition, it computes Bonferroni-Holm and Sidak-Holm adjusted *p*-values. Algorithm details and simulation test results are provided [here](/documentation/wyoung.pdf). Syntax and usage instructions can be accessed directly in Stata by typing `help wyoung` at the command prompt.
+
 
 This command was developed as part of the [Illinois Workplace Wellness Study](https://www.nber.org/workplacewellness/).
 
@@ -31,17 +32,17 @@ After installing, type `help wyoung` to learn the syntax.
 ```stata
 sysuse auto.dta, clear
 set seed 20
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) bootstraps(100)
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) reps(100)
 ```
 ![Example 1](images/example1.PNG)
-For each regression, the output reports unadjusted and adjusted *p*-values for the null hypothesis that the coefficient on the variable `displacement` is equal to 0. For example, in the regression `regress turn displacment length`, the unadjusted *p*-value is 0.09 and the Westfall-Young adjusted *p*-value is 0.14.
+For each regression, the output provides both unadjusted and adjusted *p*-values for testing the null hypothesis that the coefficient on the variable `displacement` equals 0. For example, in the regression `regress turn displacment length`, the unadjusted *p*-value is 0.09, while the Westfall-Young adjusted *p*-value is 0.14. The `reps(100)` option specifies 100 bootstrap replications, which is also the default setting.
 
 *Example 2.* Estimate a model separately for three outcomes and for two subgroups defined by `foreign` (3 X 2 = 6 hypotheses).
 ```stata
 sysuse auto.dta, clear
 set seed 20
 local yvars "mpg headroom turn"
-wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign) boot(100)
+wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement) subgroup(foreign)
 ```
 ![Example 2](images/example_subgroup.PNG)
 
@@ -50,7 +51,7 @@ wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement) su
 sysuse auto.dta, clear
 set seed 20
 local yvars "mpg headroom turn"
-wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign) boot(100)
+wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement length) subgroup(foreign)
 ```
 ![Example 3](images/example_subgroup_manytreat.PNG)
 
@@ -60,11 +61,48 @@ wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(displacement len
 sysuse auto.dta, clear
 set seed 20
 local yvars "mpg headroom turn"
-wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp boot(100)
+wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displacement) familypexp
 ```
 ![Example 4](images/example_lincom.PNG)
 
+Starting with version 2.0, `wyoung` introduces permutation resampling as an alternative to bootstrapping. The `permute()` option enables `wyoung` to shuffle a `varlist` and can be combined with the `strata()` and `cluster()` options to accommodate stratified and/or clustered assignments (see Example 5 below). For more complex treatment assignments, users can define a custom program to perform the assignment using the `permuteprogram()` option (see Example 6).
+
+*Example 5.* Perform the Westfall-Young adjustment using randomization inference (3 hypotheses, stratified random assignment).
+
+```stata
+sysuse auto.dta, clear
+set seed 20
+gen stratum = floor(mpg/11)
+gen treat = foreign
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) strata(stratum)
+```
+
+*Example 6.* Perform the Westfall-Young adjustment using randomization inference (3 hypotheses, customized assignment program).
+
+```stata
+program define myshuffle
+	syntax varname [, *]
+	tempvar randsort shuffled n_init
+
+	gen long `n_init' = _n
+	gen double `randsort' = uniform()
+	sort `randsort', stable
+	gen `shuffled' = `varlist'[`n_init']
+
+	drop `varlist'
+	ren `shuffled' `varlist'
+end
+
+sysuse auto, clear
+set seed 20 
+gen treat = foreign
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) permuteprogram(myshuffle)
+```
+
 ## Update History:
+* **2.0**
+  - added `permute()` option (thanks to Adam Sacarny). Fixed factor variables bug that caused `wyoung` to break.
+
 * **1.3.3**
   - fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
   
