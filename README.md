@@ -32,23 +32,13 @@ After installing, type `help wyoung` to learn the syntax.
 Syntax 1: multiple hypothesis testing -- one model with multiple outcomes
 
 wyoung varlist, `cmd(model)` `familyp(varlist)`
-[`subgroup(varname)` `controls("varlist1" ["varlist2" ...])``
-`reps(#)` `seed(#)` 
-`permute(varlist)` `permuteprogram(pgmname [, options])`
-`strata(varlist)` `cluster(varlist)`
-`force` `singlestep` `detail` `noresampling` `familypexp` `replace`]
+[`subgroup(varname)` `controls("varlist1" ["varlist2" ...])`]
 
 Syntax 2: multiple hypothesis testing -- more general but lengthier syntax for specifying different models with multiple outcomes
 
-wyoung, `cmd("model1" ["model2" ...])` `familyp("varname1" ["varname2" ...])``
-[`reps(#)` `seed(#)` 
-`permute(varlist)` `permuteprogram(pgmname [, options])`
-`strata(varlist)` `cluster(varlist)` 
-`force` `singlestep` `detail` `noresampling` `familypexp` `replace`]
+wyoung, `cmd("model1" ["model2" ...])` `familyp("varname1" ["varname2" ...])`
 
 Options:
-
-`cmd()`, `familyp()`, `subgroup()`, `controls()`
 
 Syntax 1: one model with multiple outcomes
 - `cmd(model)`: Specifies a single model with multiple outcomes. Replace "OUTCOMEVAR" with each variable from varlist.
@@ -62,18 +52,46 @@ Syntax 2: different models with multiple outcomes
 - `familyp("varname1" ["varname2" ...])`: Calculate adjusted p-values for specific coefficients in each model.
 
 Additional Options:
-- `reps(#)`: Number of bootstrap/permutation resamples (default: 100)
-- `seed(#)`: Set random-number seed
-- `strata(varlist)`: Select bootstrap/permutation samples within strata
-- `cluster(varlist)`: Perform resampling treating clusters as one unit
-- `permute(varlist)`: Permute (rerandomize) specified variables
-- `permuteprogram(pgmname [, options])`: Perform permutations using specified program
-- `force`: Allow models with clustered standard errors or permuting variables with missing values
-- `singlestep`: Compute single-step adjusted p-values
-- `detail`: Produce sample size statistics
-- `noresampling`: Compute only Bonferroni-Holm and Sidak-Holm adjusted p-values
-- `familypexp`: Specify more complex coefficient expressions for hypothesis testing
-- `replace`: Replace data in memory with wyoung results
+- `reps(#)` perform # bootstraps/permutations for resampling; default is `reps(100)`.
+
+- `seed(#)` sets the random-number seed. Specifying this option is equivalent to typing the following command prior to calling `wyoung`:
+
+  `. set seed #`
+
+- `strata(varlist)` specifies variables that identify identify strata. If `strata()` is specified, bootstrap/permutation samples are selected within each stratum.
+
+- `cluster(varlist)` specifies variables that identify clusters.  
+If `cluster()` is specified, the bootsrap/permutation samples are selected treating each cluster, as defined by varlist, as one unit of assignment.
+This option is required if model includes clustered standard errors, unless `force` is specified.
+See example 3 below.
+
+- `permute(varlist)` instructs `wyoung` to permute (rerandomize) varlist instead of drawing a bootstrap sample.
+When varlist includes more than one variable, those variables are permuted jointly, preserving their relations to each other.
+varlist is not permitted to include missing values, unless `force` is specified.
+If `strata()` is specified, varlist is permuted within strata.
+If `cluster()` is specified, permutations are performed treating each cluster as one unit.
+
+- `permuteprogram(pgmname [, options])` instructs `wyoung` to perform permutations by calling pgmname, 
+with the varlist contents of `permute(varlist)` passed as the first argument and options passed as options. 
+By default, `strata()` and `cluster()` are also passed as options to pgmname.
+
+- `force` allows the user to include a model with clustered standard errors without also specifying the `cluster()` bootstrap option,
+and to permute variables with missing values.
+
+- `singlestep` computes the single-step adjusted p-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their
+step-down counterparts also control the type III error rate is unknown (Westfall and Young 1993, p. 51).
+
+- `detail` produces sample size statistics for the bootstrap/permutation samples.
+
+- `noresampling` computes only the Bonferroni-Holm and Sidak-Holm adjusted p-values (very fast).
+
+- `familypexp` indicates that you are providing `familyp(exp)` instead of `familyp(varlist)` when employing Syntax 1, where exp specifies a coefficient or combination of coefficients.
+exp follows the syntax of lincom and nlcom and must not contain an equal sign.
+If employing Syntax 2, then `familypexp` indicates that 
+you are providing `familyp("exp1" ["exp2" ...])` instead of `familyp("varname1" ["varname2" ...])`.
+Specifying `familypexp` increases the set of possible hypothesis tests, but may cause `wyoung` to produce less helpful error messages when you make a syntax mistake.
+
+- `replace` replaces data in memory with `wyoung` results.
 
 ## Examples
 *Example 1.* Estimate a model separately for three outcomes (`mpg`, `headroom`, and `turn`) and calculated adjusted *p*-value for `displacement` (3 hypotheses).
