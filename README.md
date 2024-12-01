@@ -27,6 +27,54 @@ ssc install wyoung, replace
 
 After installing, type `help wyoung` to learn the syntax.
 
+## Syntax
+
+Syntax 1: multiple hypothesis testing -- one model with multiple outcomes
+
+wyoung varlist, `cmd(model)` `familyp(varlist)`
+[`subgroup(varname)` `controls("varlist1" ["varlist2" ...])``
+`reps(#)` `seed(#)` 
+`permute(varlist)` `permuteprogram(pgmname [, options])`
+`strata(varlist)` `cluster(varlist)`
+`force` `singlestep` `detail` `noresampling` `familypexp` `replace`]
+
+Syntax 2: multiple hypothesis testing -- more general but lengthier syntax for specifying different models with multiple outcomes
+
+wyoung, `cmd("model1" ["model2" ...])` `familyp("varname1" ["varname2" ...])``
+[`reps(#)` `seed(#)` 
+`permute(varlist)` `permuteprogram(pgmname [, options])`
+`strata(varlist)` `cluster(varlist)` 
+`force` `singlestep` `detail` `noresampling` `familypexp` `replace`]
+
+Options:
+
+`cmd()`, `familyp()`, `subgroup()`, `controls()`
+
+Syntax 1: one model with multiple outcomes
+- `cmd(model)`: Specifies a single model with multiple outcomes. Replace "OUTCOMEVAR" with each variable from varlist.
+- `familyp(varlist)`: Calculate adjusted p-values for null hypotheses of coefficients being zero.
+- `subgroup(varname)`: Estimate models separately for each subgroup.
+- `controls("varlist1" ["varlist2" ...])`: Specify different controls for each outcome, replacing "CONTROLVARS".
+- `controlsinteract()`: Estimate models for all pairwise combinations of outcomes and controls.
+
+Syntax 2: different models with multiple outcomes
+- `cmd("model1" ["model2" ...])`: Specify a list of models.
+- `familyp("varname1" ["varname2" ...])`: Calculate adjusted p-values for specific coefficients in each model.
+
+Additional Options:
+- `reps(#)`: Number of bootstrap/permutation resamples (default: 100)
+- `seed(#)`: Set random-number seed
+- `strata(varlist)`: Select bootstrap/permutation samples within strata
+- `cluster(varlist)`: Perform resampling treating clusters as one unit
+- `permute(varlist)`: Permute (rerandomize) specified variables
+- `permuteprogram(pgmname [, options])`: Perform permutations using specified program
+- `force`: Allow models with clustered standard errors or permuting variables with missing values
+- `singlestep`: Compute single-step adjusted p-values
+- `detail`: Produce sample size statistics
+- `noresampling`: Compute only Bonferroni-Holm and Sidak-Holm adjusted p-values
+- `familypexp`: Specify more complex coefficient expressions for hypothesis testing
+- `replace`: Replace data in memory with wyoung results
+
 ## Examples
 *Example 1.* Estimate a model separately for three outcomes (`mpg`, `headroom`, and `turn`) and calculated adjusted *p*-value for `displacement` (3 hypotheses).
 ```stata
@@ -35,7 +83,7 @@ set seed 20
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) reps(100)
 ```
 ![Example 1](images/example1.PNG)
-For each regression, the output provides both unadjusted and adjusted *p*-values for testing the null hypothesis that the coefficient on the variable `displacement` equals 0. For example, in the regression `regress turn displacment length`, the unadjusted *p*-value is 0.09, while the Westfall-Young adjusted *p*-value is 0.14. The `reps(100)` option specifies 100 bootstrap replications, which is also the default setting.
+For each regression, the output provides both unadjusted and adjusted *p*-values for testing the null hypothesis that the coefficient on the variable `displacement` equals 0. For example, in the regression `regress turn displacment length`, the unadjusted *p*-value is 0.09, while the Westfall-Young adjusted *p*-value is 0.14. The `reps(100)` option specifies 100 bootstrap replications, which is the default setting and is omitted in the examples below for simplicity.
 
 *Example 2.* Estimate a model separately for three outcomes and for two subgroups defined by `foreign` (3 X 2 = 6 hypotheses).
 ```stata
@@ -65,7 +113,7 @@ wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displa
 ```
 ![Example 4](images/example_lincom.PNG)
 
-Starting with version 2.0, `wyoung` introduces permutation resampling as an alternative to bootstrapping. The `permute()` option enables `wyoung` to shuffle a `varlist` and can be combined with the `strata()` and `cluster()` options to accommodate stratified and/or clustered assignments (see Example 5 below). For more complex treatment assignments, users can define a custom program to perform the assignment using the `permuteprogram()` option (see Example 6).
+By default, `wyoung` uses bootstrapping. Alternatively, users can specify the `permute()` option to shuffle a `varlist`. As with bootstrapping, permutation can be combined with the `strata()` and `cluster()` options to account for stratified and/or clustered assignments (see Example 5 below). For more complex treatment assignments, users can define a custom program to handle the assignment process using the `permuteprogram()` option (see Example 6).
 
 *Example 5.* Perform the Westfall-Young adjustment using randomization inference (3 hypotheses, stratified random assignment).
 
@@ -81,6 +129,8 @@ wyoung mpg headroom turn, cmd(regress OUTCOMEVAR treat) familyp(treat) permute(t
 
 ```stata
 program define myshuffle
+
+	* By default, strata() and cluster() are passed as arguments
 	syntax varname [, *]
 	tempvar randsort shuffled n_init
 
