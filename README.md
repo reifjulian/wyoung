@@ -7,7 +7,7 @@
 
 ## Overview: 
 
-`wyoung` is a Stata command designed to calculate adjusted *p*-values using the free step-down resampling method developed by Westfall and Young (1993). In addition, it computes Bonferroni-Holm and Sidak-Holm adjusted *p*-values. Algorithm details and simulation test results are provided [here](/documentation/wyoung.pdf). Syntax and usage instructions can be accessed directly in Stata by typing `help wyoung` at the command prompt.
+`wyoung` is a Stata command designed to control the family-wise error rate when performing multiple hypothesis tests. It calculates adjusted *p*-values using the free step-down resampling method developed by Westfall and Young (1993). In addition, it computes Bonferroni-Holm and Sidak-Holm adjusted *p*-values. Algorithm details and simulation test results are provided [here](/documentation/wyoung.pdf). Syntax and usage instructions can be accessed directly in Stata by typing `help wyoung` at the command prompt.
 
 
 This command was developed as part of the [Illinois Workplace Wellness Study](https://www.nber.org/workplacewellness/).
@@ -20,62 +20,15 @@ Type `which wyoung` at the Stata prompt to determine your current version number
 net install wyoung, from("https://raw.githubusercontent.com/reifjulian/wyoung/master") replace
 ```
 
-To install the version that was uploaded to SSC, copy/paste the following line of code:
+To install the latest version that was uploaded to SSC, copy and paste the following line of code:
 ```stata
 ssc install wyoung, replace
 ```
 
 After installing, type `help wyoung` to learn the syntax.
 
-## Syntax
+## Examples:
 
-Syntax 1: multiple hypothesis testing -- one model with multiple outcomes
-
-  `wyoung` `varlist`, `cmd(model)` `familyp(varlist)` `[subgroup(varname)` `controls("varlist1" ["varlist2" ...])]`
-
-Syntax 2: multiple hypothesis testing -- more general but lengthier syntax for specifying different models with multiple outcomes
-
-  `wyoung`, `cmd("model1" ["model2" ...])` `familyp("varname1" ["varname2" ...])`
-
-Options:
-Syntax 1: one model with multiple outcomes (see example 1 below)
-- `cmd(model)` specifies a single model with the multiple outcomes varlist. The outcome (dependent) variable is indicated in model by "OUTCOMEVAR" (upper case). `wyoung` will estimate multiple outcome specifications by substituting each variable from varlist into "OUTCOMEVAR".
-- `familyp(varlist)` instructs `wyoung` to calculate adjusted p-values for the null hypotheses that the coefficients of varlist are equal to 0.
-- `subgroup(varname)` specifies an integer variable identifying subgroups. If `subgroup()` is specified, `wyoung` will estimate models separately for each subgroup. By default, specifying `subgroup()` will cause `wyoung` to select bootstrap/permutation samples within each subgroup, unless you specify otherwise in `strata()`. See example 4 below.
-- `controls("varlist1" ["varlist2" ...])` lets you specify different controls for each outcome. The control variables are indicated in model by "CONTROLVARS" (upper case). For the first outcome variable, `wyoung` will substitute varlist1 into "CONTROLVARS", for the second outcome it will substitute varlist2, and so on. See example 7 below.
-- `controlsinteract("varlist1" ["varlist2" ...])` is an alternative to `controls()` that estimates the model separately for all pairwise combinations of outcome variables and specified controls. Each set of controls will be substituted into "CONTROLVARS" as specified in model. Specifying N different sets of controls (varlist1, varlist2, ..., varlistN) will multiply the number of hypotheses being tested by N. See example 8 below.
-
-Syntax 2: different models with multiple outcomes (see example 2 below)
-- `cmd("model1" ["model2" ...])` specifies a list of models.
-- `familyp("varname1" ["varname2" ...])` instructs `wyoung` to calculate adjusted p-values for the null hypotheses that the coefficient of varname1 is equal to 0 in model1, the coefficient of varname2 is equal to 0 in model2, etc. If only one varname is specified, `wyoung` applies it to all models.
-
-Additional Options:
-- `reps(#)` perform # bootstraps/permutations for resampling; default is `reps(100)`.
-
-- `seed(#)` sets the random-number seed.
-
-- `strata(varlist)` specifies variables that identify identify strata. If `strata()` is specified, bootstrap/permutation samples are selected within each stratum.
-
-- `cluster(varlist)` specifies variables that identify clusters. If `cluster()` is specified, the bootsrap/permutation samples are selected treating each cluster, as defined by varlist, as one unit of assignment. This option is required if model includes clustered standard errors, unless `force` is specified. See example 3 below.
-
-- `permute(varlist)` instructs `wyoung` to permute (rerandomize) varlist instead of drawing a bootstrap sample. When varlist includes more than one variable, those variables are permuted jointly, preserving their relations to each other. varlist is not permitted to include missing values, unless `force` is specified. If `strata()` is specified, varlist is permuted within strata. If `cluster()` is specified, permutations are performed treating each cluster as one unit.
-
-- `permuteprogram(pgmname [, options])` instructs `wyoung` to perform permutations by calling pgmname, 
-with the varlist contents of `permute(varlist)` passed as the first argument and options passed as options. By default, `strata()` and `cluster()` are also passed as options to pgmname.
-
-- `force` allows the user to include a model with clustered standard errors without also specifying the `cluster()` bootstrap option, and to permute variables with missing values.
-
-- `singlestep` computes the single-step adjusted p-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their step-down counterparts also control the type III error rate is unknown (Westfall and Young 1993, p. 51).
-
-- `detail` produces sample size statistics for the bootstrap/permutation samples.
-
-- `noresampling` computes only the Bonferroni-Holm and Sidak-Holm adjusted p-values (very fast).
-
-- `familypexp` indicates that you are providing `familyp(exp)` instead of `familyp(varlist)` when employing Syntax 1, where exp specifies a coefficient or combination of coefficients. exp follows the syntax of lincom and nlcom and must not contain an equal sign. If employing Syntax 2, then `familypexp` indicates that you are providing `familyp("exp1" ["exp2" ...])` instead of `familyp("varname1" ["varname2" ...])`. Specifying `familypexp` increases the set of possible hypothesis tests, but may cause `wyoung` to produce less helpful error messages when you make a syntax mistake.
-
-- `replace` replaces data in memory with `wyoung` results.
-
-## Examples
 *Example 1.* Estimate a model separately for three outcomes (`mpg`, `headroom`, and `turn`) and calculated adjusted *p*-value for `displacement` (3 hypotheses).
 ```stata
 sysuse auto.dta, clear
@@ -113,9 +66,9 @@ wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displa
 ```
 ![Example 4](images/example_lincom.PNG)
 
-By default, `wyoung` uses bootstrapping. Alternatively, users can specify the `permute()` option to shuffle a `varlist`. As with bootstrapping, permutation can be combined with the `strata()` and `cluster()` options to account for stratified and/or clustered assignments (see Example 5 below). For more complex treatment assignments, users can define a custom program to handle the assignment process using the `permuteprogram()` option (see Example 6).
+By default, `wyoung` uses bootstrapping to resample the data. Alternatively, users can specify the `permute()` option to perform permutation-based resampling. As with bootstrapping, permutations can be combined with the `strata()` and `cluster()` options to account for stratified or clustered assignments (see Example 5 below). For more complex treatment assignment schemes, users can define a custom program to handle the assignment process via the `permuteprogram()` option (see Example 6).
 
-*Example 5.* Perform the Westfall-Young adjustment using randomization inference (3 hypotheses, stratified random assignment).
+*Example 5.* Perform the Westfall-Young adjustment using permutation with a stratified random sample (3 hypotheses).
 
 ```stata
 sysuse auto.dta, clear
@@ -125,7 +78,7 @@ gen treat = foreign
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) strata(stratum)
 ```
 
-*Example 6.* Perform the Westfall-Young adjustment using randomization inference (3 hypotheses, customized assignment program).
+*Example 6.* Perform the Westfall-Young adjustment using permutation with a customized assignment program (3 hypotheses).
 
 ```stata
 program define myshuffle
