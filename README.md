@@ -77,6 +77,7 @@ gen treat = foreign
 local yvars "mpg headroom turn"
 wyoung `yvars', cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) strata(stratum)
 ```
+![Example 5](images/example_permute.PNG)
 
 *Example 6.* Perform the Westfall-Young adjustment using permutation with a customized assignment program (3 hypotheses).
 
@@ -99,9 +100,10 @@ end
 sysuse auto, clear
 set seed 20 
 gen treat = foreign
-local yvars "mpg headroom turn"
+local yvars "price headroom mpg"
 wyoung `yvars', cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) permuteprogram(myshuffle)
 ```
+![Example 6](images/example_permuteprogram.PNG)
 
 ## Update History:
 * **2.0**
