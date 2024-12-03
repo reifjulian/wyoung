@@ -1,5 +1,5 @@
-*! wyoung 2.0 21nov2024 by Julian Reif
-* 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps. fixed factor variables bug. TO DO: update help file and github with examples, remove "Running beta" text.
+*! wyoung 2.0 3dec2024 by Julian Reif
+* 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps and set default to 100. fixed factor variables bug
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
 * 1.3.1: new controls option functionality. old functionality moved to controlsinteract
@@ -24,7 +24,6 @@ program define wyoung, rclass
 	version 13
 
 	* Syntax 1: one model with multiple outcomes (and possibly multiple controls and subgroups)
-	noi di in green "NOTE: Running beta (permute) version of wyoung" _n
 	syntax [varlist(default=none)], cmd(string) familyp(string) [Reps(numlist int max=1 >0) BOOTstraps(numlist int max=1 >0) weights(varlist) noRESAMPling seed(numlist max=1) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp permute(varlist) PERMUTEProgram(string) replace]
 
 	local outcome_vars "`varlist'"
@@ -499,6 +498,9 @@ program define wyoung, rclass
 	* Resample the data and calculated Westfall-Young adjusted p-vals
 	******	
 	if "`resampling'"!="noresampling" {
+		
+		if "`permute'"=="" noi di as text _n "Performing " as result "`reps' " as text "bootstrap replications..."
+		else               noi di as text _n "Performing " as result "`reps' " as text "permutations..."		
 
 		***
 		* Step 2(a). Loop over each sample i and calculate pstar's

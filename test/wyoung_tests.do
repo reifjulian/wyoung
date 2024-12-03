@@ -9,117 +9,6 @@ set more off
 set tracedepth 1
 * set trace on
 
-
-*********************************************
-* Permute examples
-*********************************************
-
-sysuse auto, clear
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) replace
-cf _all using "compare/permute1.dta"
-
-sysuse auto, clear
-gen st = floor(mpg/11)
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) strata(st) replace
-cf _all using "compare/permute2.dta"
-
-
-* When cluster size=1, estimates are identical to non-cluster case
-sysuse auto, clear
-gen clusterid = _n
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) cluster(clusterid) replace
-cf _all using "compare/permute1.dta"
-
-sysuse auto, clear
-gen clusterid = _n
-gen st = floor(mpg/11)
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) cluster(clusterid) strata(st) replace
-cf _all using "compare/permute2.dta"
-
-* clustered standard errors example
-sysuse auto, clear
-expand 100
-set seed 21
-gen clvar = mod(_n,100)
-bysort clvar: gen byte t = round(uniform()) if _n==1
-by clvar: egen treat = mean(t)
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length treat, cluster(clvar)) cluster(clvar) permute(treat) familyp(treat) reps(100) seed(20) replace
-ren p* p*_test
-merge 1:1 k using "compare/permute3.dta", assert(match) nogenerate
-foreach v in p pwyoung pbonf psidak {
-	assert abs(`v'-`v'_test)<0.000001
-}
-
-* Generate error if treatment is not constant within a cluster
-sysuse auto, clear
-gen clusterid = mod(_n,10)
-rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) cluster(clusterid) replace
-assert _rc==9
-
-
-* Custom program (replicates permute1 example)
-cap program drop myshuffle
-program define myshuffle
-
-	syntax varname [, *]
-	tempvar randsort shuffled n_init
-	
-	gen long `n_init' = _n
-	gen double `randsort' = uniform()
-	sort `randsort', stable
-	gen `shuffled' = `varlist'[`n_init']
-	
-	drop `varlist'
-	ren `shuffled' `varlist'	
-end
-
-sysuse auto, clear
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) permuteprogram(myshuffle) replace
-cf _all using "compare/permute1.dta"
-
-* Irrelevant options are ok
-sysuse auto, clear
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) permuteprogram("myshuffle, options") replace
-cf _all using "compare/permute1.dta"
-
-
-* Non-existant program produces error
-sysuse auto, clear
-rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) permuteprogram(myshuffle2) replace
-assert _rc==199
-
-* Not specifying permute() produces error
-sysuse auto, clear
-rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permuteprogram(myshuffle) replace
-assert _rc==198
-
-* Missing values produces error, unless force is specified
-sysuse auto, clear
-replace foreign = . in 5/10
-rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(5) seed(20) permute(foreign) 
-assert _rc==416
-
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(5) seed(20) permute(foreign) force
-
-* Permuting a row vector (for dummy vars, can be done two different ways)
-sysuse auto, clear
-set seed 11
-gen fvar = floor(uniform()*3)
-wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length i.fvar") familyp("1.fvar 2.fvar") reps(100) seed(20) permute(fvar) replace
-cf _all using "compare/permute4.dta"
-
-sysuse auto, clear
-set seed 11
-gen fvar = floor(uniform()*3)
-gen treat1 = fvar==1
-gen treat2 = fvar==2
-wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length treat1 treat2") familyp("treat1 treat2") reps(100) seed(20) permute(treat1 treat2) replace
-ren p* p*_test
-merge 1:1 k using "compare/permute4.dta", assert(match) nogenerate
-foreach v in p pwyoung pbonf psidak {
-	assert abs(`v'-`v'_test)<0.000001
-}
-
 *********************************************
 * Example 1
 *********************************************
@@ -551,6 +440,139 @@ cf _all using "compare/hf_example8.dta"
 sysuse auto.dta, clear
 wyoung, cmd("regress mpg displacement headroom" "regress rep78 displacement headroom" "regress mpg displacement turn"  "regress rep78 displacement turn") familyp(displacement) reps(100) seed(20) replace
 cf _all using "compare/hf_example8.dta"
+
+sysuse auto, clear
+gen stratum = floor(mpg/11)
+gen treat = foreign
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) strata(stratum) seed(20) replace
+cf _all using "compare/hf_example9.dta"
+
+cap program drop myshuffle
+program define myshuffle
+	syntax varname [, *]
+	tempvar randsort shuffled n_init
+	
+	gen long `n_init' = _n
+	gen double `randsort' = uniform()
+	sort `randsort', stable
+	gen `shuffled' = `varlist'[`n_init']
+	drop `varlist'
+	ren `shuffled' `varlist'
+end 
+sysuse auto, clear
+gen treat = foreign
+wyoung price headroom mpg, cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) permuteprogram(myshuffle) seed(20) replace
+cf _all using "compare/hf_example10.dta"
+
+*********************************************
+* Permute examples
+*********************************************
+
+sysuse auto, clear
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) replace
+cf _all using "compare/permute1.dta"
+
+sysuse auto, clear
+gen st = floor(mpg/11)
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) strata(st) replace
+cf _all using "compare/permute2.dta"
+
+
+* When cluster size=1, estimates are identical to non-cluster case
+sysuse auto, clear
+gen clusterid = _n
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) cluster(clusterid) replace
+cf _all using "compare/permute1.dta"
+
+sysuse auto, clear
+gen clusterid = _n
+gen st = floor(mpg/11)
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) cluster(clusterid) strata(st) replace
+cf _all using "compare/permute2.dta"
+
+* clustered standard errors example
+sysuse auto, clear
+expand 100
+set seed 21
+gen clvar = mod(_n,100)
+bysort clvar: gen byte t = round(uniform()) if _n==1
+by clvar: egen treat = mean(t)
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length treat, cluster(clvar)) cluster(clvar) permute(treat) familyp(treat) reps(100) seed(20) replace
+ren p* p*_test
+merge 1:1 k using "compare/permute3.dta", assert(match) nogenerate
+foreach v in p pwyoung pbonf psidak {
+	assert abs(`v'-`v'_test)<0.000001
+}
+
+* Generate error if treatment is not constant within a cluster
+sysuse auto, clear
+gen clusterid = mod(_n,10)
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) cluster(clusterid) replace
+assert _rc==9
+
+
+* Custom program (replicates permute1 example)
+cap program drop myshuffle
+program define myshuffle
+
+	syntax varname [, *]
+	tempvar randsort shuffled n_init
+	
+	gen long `n_init' = _n
+	gen double `randsort' = uniform()
+	sort `randsort', stable
+	gen `shuffled' = `varlist'[`n_init']
+	
+	drop `varlist'
+	ren `shuffled' `varlist'	
+end
+
+sysuse auto, clear
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) permuteprogram(myshuffle) replace
+cf _all using "compare/permute1.dta"
+
+* Irrelevant options are ok
+sysuse auto, clear
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) permuteprogram("myshuffle, options") replace
+cf _all using "compare/permute1.dta"
+
+
+* Non-existant program produces error
+sysuse auto, clear
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permute(foreign) permuteprogram(myshuffle2) replace
+assert _rc==199
+
+* Not specifying permute() produces error
+sysuse auto, clear
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(100) seed(20) permuteprogram(myshuffle) replace
+assert _rc==198
+
+* Missing values produces error, unless force is specified
+sysuse auto, clear
+replace foreign = . in 5/10
+rcof noi wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(5) seed(20) permute(foreign) 
+assert _rc==416
+
+wyoung mpg headroom turn, cmd(regress OUTCOMEVAR foreign length) familyp(foreign) reps(5) seed(20) permute(foreign) force
+
+* Permuting a row vector (for dummy vars, can be done two different ways)
+sysuse auto, clear
+set seed 11
+gen fvar = floor(uniform()*3)
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length i.fvar") familyp("1.fvar 2.fvar") reps(100) seed(20) permute(fvar) replace
+cf _all using "compare/permute4.dta"
+
+sysuse auto, clear
+set seed 11
+gen fvar = floor(uniform()*3)
+gen treat1 = fvar==1
+gen treat2 = fvar==2
+wyoung mpg headroom turn, cmd("regress OUTCOMEVAR displacement length treat1 treat2") familyp("treat1 treat2") reps(100) seed(20) permute(treat1 treat2) replace
+ren p* p*_test
+merge 1:1 k using "compare/permute4.dta", assert(match) nogenerate
+foreach v in p pwyoung pbonf psidak {
+	assert abs(`v'-`v'_test)<0.000001
+}
 
 ******************************************************************************************************************************************
 * Simulations (NSIM=1):

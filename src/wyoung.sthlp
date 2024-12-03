@@ -97,12 +97,11 @@ If {cmd:cluster()} is specified, permutations are performed treating each cluste
 {p 4 8 2}
 {cmdab:permutep:rogram(}{it:pgmname [, options]}{cmd:)} instructs {cmd:wyoung} to perform permutations by calling {it:pgmname}, 
 with the {it:varlist} contents of {cmd:permute(}{it:varlist}{cmd:)} passed as the first argument and {it: options} passed as options. 
-By default, {cmd:strata()} and {cmd:cluster()} are also passed as options to {it:pgmname}.
+By default, {cmd:strata()} and {cmd:cluster()} are also passed as options to {it:pgmname}. See example 10 below.
 
 {p 4 8 2}
 {cmd:force} allows the user to include a model with clustered standard errors without also specifying the {cmd:cluster()} bootstrap option,
 and to permute variables with missing values.
-
 
 {p 4 8 2}
 {cmdab:single:step} computes the single-step adjusted {it:p}-value in addition to the step-down value. Resampling-based single-step methods often control type III (sign) error rates. Whether their
@@ -127,24 +126,24 @@ Specifying {cmd:familypexp} increases the set of possible hypothesis tests, but 
 
 {title:Description}
 
-{p 4 4 2}{cmd:wyoung} calculates adjusted {it:p}-values using the free step-down resampling methodology of Westfall and Young (1993). It also computes the Bonferroni-Holm and Sidak-Holm adjusted {it:p}-values.
+{p 4 4 2}{cmd:wyoung} controls the family-wise error rate using the free step-down resampling methodology of Westfall and Young (1993). 
+This method leverages resampling techniques, such as bootstrapping (resampling with replacement) or permutation (reshuffling), to adjust the standard {it:p}-values obtained from model estimation. 
+It also computes the Bonferroni-Holm and Sidak-Holm adjusted {it:p}-values.
 
-{p 4 4 2}The family-wise error rate (FWER) is the probability of rejecting any true null hypothesis belonging to a "family" of hypotheses. In other words, the FWER is the probability of making at least one false discovery within the family. 
-When subset pivotality holds, the resampling-based method of Westfall and Young (1993) controls the FWER regardless of which hypotheses in the family happen to be true.
+{p 4 4 2}The family-wise error rate (FWER) is the probability of rejecting at least one true null hypothesis---commonly referred to as making "false discovery"---within a "family" of hypotheses. 
+A procedure is said to provide {it:strong control} of the FWER if it maintains the error rate at or below a specified level regardless of how many of the hypotheses are true. 
+In contrast, {it:weak control} of the FWER applies only under the assumption that all hypotheses are true, i.e., when the complete null hypothesis holds.
 
-{p 4 4 2}The sampling distribution of a pivotal statistic does not depend upon which distribution generated the data. The {it:t}-statistic is an example of a pivotal statistic.
-Subset pivotality extends this concept to a multivariate setting. The subset pivotality condition requires that the multivariate distribution of any subvector of {it:p}-values is unaffected
-by the truth or falsehood of hypotheses corresponding to {it:p}-values not included in the subvector. This condition is satisfied in many cases, including testing the significance of coefficients
-in a general multivariate regression model with possibly non-normal distributions.
-
-{p 4 4 2}{cmd:wyoung} supports both bootstrap resampling (i.e., sampling with replacement) and permutation sampling (rerandomization).
+{p 4 4 2}The Westfall-Young resampling algorithm provides strong control of the FWER under the condition of subset pivotality, a multivariate generalization of pivotality.
+Subset pivotality requires that the joint distribution of any subvector of {it:p}-values remains unaffected by the truth or falsehood of hypotheses corresponding to {it:p}-values not included in the subvector. 
+This condition is satisfied in many settings, including significance testing for coefficients in a general multivariate regression model with possibly non-normal or heteroskedastic errors.
 
 
 {title:Methods and formulas}
 
-{p 4 4 2}The free step-down resampling method employed by {cmd:wyoung} is based on Algorithm 2.8 of Westfall and Young (1993). 
-The single-step resampling method (see option {cmd:singlestep}) is based on Algorithm 2.5 of Westfall and Young (1993). Detailed documentation 
-is available online at {browse "https://reifjulian.github.io/wyoung/documentation/wyoung.pdf":https://reifjulian.github.io/wyoung/documentation/wyoung.pdf}.
+{p 4 4 2}The free step-down resampling method implemented in {cmd:wyoung} follows Algorithm 2.8 of Westfall and Young (1993). 
+The single-step resampling method, available via the {cmd:singlestep} option, follows Algorithm 2.5 of Westfall and Young (1993). 
+Detailed documentation, including simulation results, can be found online at {browse "https://reifjulian.github.io/wyoung/documentation/wyoung.pdf":https://reifjulian.github.io/wyoung/documentation/wyoung.pdf}.
 
 {p 4 4 2}The Bonferroni-Holm and Sidak-Holm step-down {it:p}-values are calculated as follows. Sort the {it:J} unadjusted {it:p}-values so that {it:p(1)<p(2)<...<p(J)}. 
 The Bonferroni-Holm adjusted {it:p}-values are calculated as {it:{p(1)*J, max[p(1),p(2)*(J-1)],..., max[p(J-1),p(J)]}}. 
@@ -217,6 +216,45 @@ sizes across bootstraps/permutations.
 
 {col 8}Syntax 2 (identical output):
 {col 8}{cmd:. {stata wyoung, cmd("regress mpg displacement headroom" "regress rep78 displacement headroom" "regress mpg displacement turn"  "regress rep78 displacement turn") familyp(displacement) reps(100) seed(20)}}
+
+{p 4 4 2}9. Perform the Westfall-Young adjustment using permutation with a stratified random sample (3 hypotheses).
+
+{col 8}{cmd:. {stata sysuse auto, clear}}
+
+{col 8}{cmd:. {stata gen stratum = floor(mpg/11)}}
+
+{col 8}{cmd:. {stata gen treat = foreign}}
+
+{col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) strata(stratum) seed(20)}}
+
+{p 4 4 2}10. Perform the Westfall-Young adjustment using permutation with a customized assignment program (3 hypotheses).
+
+{col 8}{cmd: {stata program define myshuffle}}
+
+{col 8}{cmd:     {stata syntax varname [, *]}}
+
+{col 8}{cmd:     {stata tempvar randsort shuffled n_init}}
+
+{col 8}{cmd:     {stata gen long `n_init' = _n}}
+
+{col 8}{cmd:     {stata gen double `randsort' = uniform()}}
+
+{col 8}{cmd:     {stata sort `randsort', stable}}
+
+{col 8}{cmd:     {stata gen `shuffled' = `varlist'[`n_init']}}
+
+{col 8}{cmd:     {stata drop `varlist'}}
+
+{col 8}{cmd:     {stata ren `shuffled' `varlist'}}
+
+{col 8}{cmd: {stata end }}
+
+{col 8}{cmd:. {stata sysuse auto, clear}}
+
+{col 8}{cmd:. {stata gen treat = foreign}}
+
+{col 8}{cmd:. {stata wyoung price headroom mpg, cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) permuteprogram(myshuffle) seed(20)}}
+
 
 {title:Stored results}
 

@@ -1,6 +1,6 @@
 # WYOUNG: control the family-wise error rate when performing multiple hypothesis tests
 
-- Current version: `2.0 21nov2024`
+- Current version: `2.0 3dec2024`
 - Jump to: [`overview`](#overview) [`installation`](#installation) [`examples`](#examples) [`update history`](#update-history) [`citation`](#citation) 
 
 -----------
@@ -99,12 +99,12 @@ end
 sysuse auto, clear
 set seed 20 
 gen treat = foreign
-wyoung mpg headroom turn, cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) permuteprogram(myshuffle)
+wyoung price headroom mpg, cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) permuteprogram(myshuffle)
 ```
 
 ## Update History:
 * **2.0**
-  - added `permute()` option (thanks to Adam Sacarny). Fixed factor variables bug that caused `wyoung` to break.
+  - added `permute()` option (thanks to Adam Sacarny). renamed `bootstraps()` option to `reps()` and set default to 100. fixed factor variables bug
 
 * **1.3.3**
   - fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
