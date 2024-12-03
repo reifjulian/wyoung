@@ -7,14 +7,7 @@
 
 ## Overview: 
 
-`wyoung` is a Stata command that controls the family-wise error rate using the free step-down resampling methodology of Westfall and Young (1993). This method leverages resampling techniques, such as bootstrapping (resampling with replacement) or permutation (reshuffling), to adjust the standard *p*-values obtained from model estimation. It also computes the Bonferroni-Holm and Sidak-Holm adjusted {it:p}-values.
-
-The family-wise error rate (FWER) is the probability of rejecting at least one true null hypothesis---commonly referred to as making "false discovery"---within a "family" of hypotheses. A procedure is said to provide *strong control* of the FWER if it maintains the error rate at or below a specified level regardless of how many of the hypotheses are true. In contrast, *weak control* of the FWER applies only under the assumption that all hypotheses are true, i.e., when the complete null hypothesis holds.
-
-The Westfall-Young resampling algorithm provides strong control of the FWER under the condition of subset pivotality, a multivariate generalization of pivotality.
-Subset pivotality requires that the joint distribution of any subvector of *p*-values remains unaffected by the truth or falsehood of hypotheses corresponding to *p*-values not included in the subvector. This condition is satisfied in many settings, including significance testing for coefficients in a general multivariate regression model with possibly non-normal or heteroskedastic errors.
-
-The free step-down resampling method implemented in `wyoung` follows Algorithm 2.8 of Westfall and Young (1993). The single-step resampling method, available via the `singlestep` option, follows Algorithm 2.5 of Westfall and Young (1993). Detailed documentation, including simulation results, can be found [here](/documentation/wyoung.pdf). Syntax and usage instructions can be accessed directly in Stata by typing `help wyoung` at the command prompt.
+`wyoung` is a Stata command that controls the family-wise error rate using the free step-down resampling methodology of Westfall and Young (1993). This method leverages resampling techniques, such as bootstrapping (resampling with replacement) or permutation (reshuffling), to adjust the standard *p*-values obtained from model estimation. It also computes the Bonferroni-Holm and Sidak-Holm adjusted *p*-values. Detailed documentation, including simulation results, can be found [here](/documentation/wyoung.pdf). Syntax and usage instructions can be accessed directly in Stata by typing `help wyoung` at the command prompt.
 
 This command was developed as part of the [Illinois Workplace Wellness Study](https://www.nber.org/workplacewellness/).
 
