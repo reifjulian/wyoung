@@ -127,7 +127,7 @@ Specifying {cmd:familypexp} increases the set of possible hypothesis tests, but 
 {title:Description}
 
 {p 4 4 2}{cmd:wyoung} controls the family-wise error rate using the free step-down resampling methodology of Westfall and Young (1993). 
-This method leverages resampling techniques, such as bootstrapping (resampling with replacement) or permutation (reshuffling), to adjust the standard {it:p}-values obtained from model estimation. 
+This method leverages resampling techniques, such as bootstrapping (sampling with replacement) or permutation (shuffling), to adjust the standard {it:p}-values obtained from model estimation. 
 It also computes the Bonferroni-Holm and Sidak-Holm adjusted {it:p}-values.
 
 {p 4 4 2}The family-wise error rate (FWER) is the probability of rejecting at least one true null hypothesis---commonly referred to as making "false discovery"---within a "family" of hypotheses. 
