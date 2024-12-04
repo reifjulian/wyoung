@@ -65,6 +65,8 @@ wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displa
 ```
 ![Example 4](images/example_lincom.PNG)
 
+### Permutation
+
 By default, `wyoung` uses bootstrapping to resample the data. Alternatively, users can specify the `permute()` option to perform permutation-based resampling. As with bootstrapping, permutations can be combined with the `strata()` and `cluster()` options to account for stratified or clustered assignments (see Example 5 below). For more complex treatment assignment schemes, users can define a custom program to handle the assignment process via the `permuteprogram()` option (see Example 6).
 
 **Example 5.** Perform the Westfall-Young adjustment using permutation with a stratified random sample (3 hypotheses).
@@ -83,10 +85,8 @@ wyoung `yvars', cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) stra
 
 ```stata
 program define myshuffle
-
-	* By default, strata() and cluster() are passed as arguments
 	syntax varname [, *]
-	tempvar randsort shuffled n_init
+	tempvar n_init randsort shuffled 
 
 	gen long `n_init' = _n
 	gen double `randsort' = uniform()

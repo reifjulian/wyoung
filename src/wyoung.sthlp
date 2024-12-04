@@ -233,7 +233,7 @@ sizes across bootstraps/permutations.
 
 {col 8}{cmd:     {stata syntax varname [, *]}}
 
-{col 8}{cmd:     {stata tempvar randsort shuffled n_init}}
+{col 8}{cmd:     {stata tempvar n_init randsort shuffled}}
 
 {col 8}{cmd:     {stata gen long `n_init' = _n}}
 
