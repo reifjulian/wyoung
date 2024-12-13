@@ -107,7 +107,7 @@ wyoung `yvars', cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) perm
 
 ## Update History
 * **2.0**
-  - added `permute()` option (thanks to Adam Sacarny). renamed `bootstraps()` option to `reps()` and set default to 100. fixed factor variables bug
+  - added `permute()` option. renamed `bootstraps()` option to `reps()` and set default to 100. fixed factor variables bug
 
 * **1.3.3**
   - fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
