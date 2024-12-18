@@ -67,7 +67,7 @@ wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displa
 
 ### Permutation
 
-By default, `wyoung` uses bootstrapping to resample the data. Alternatively, users can specify the `permute()` option to perform permutation-based resampling. As with bootstrapping, permutations can be combined with the `strata()` and `cluster()` options to account for stratified or clustered assignments (see Example 5 below). For more complex treatment assignment schemes, users can define a custom program to handle the assignment process via the `permuteprogram()` option (see Example 6).
+By default, `wyoung` uses bootstrapping to resample the data. Alternatively, the `permute()` can be used to perform permutation-based resampling. As with bootstrapping, permutation-based resampling can incorporate stratification and clustering via the `strata()` and `cluster()` options (see Example 5 below). For more complex treatment assignment schemes, users can specify a custom program using the `permuteprogram()` option (see Example 6). In this case, the contents of `permute()` are passed as the first argument to the custom program. Refer to the Stata help file (`help wyoung`) for additional details.
 
 **Example 5.** Perform the Westfall-Young adjustment using permutation with a stratified random sample (3 hypotheses).
 
