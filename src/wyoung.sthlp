@@ -96,8 +96,13 @@ If {cmd:cluster()} is specified, permutations are performed treating each cluste
 
 {p 4 8 2}
 {cmdab:permutep:rogram(}{it:pgmname [, options]}{cmd:)} instructs {cmd:wyoung} to perform permutations by calling {it:pgmname}, 
-with the {it:varlist} contents of {cmd:permute(}{it:varlist}{cmd:)} passed as the first argument and {it: options} passed as options. 
-By default, {cmd:strata()} and {cmd:cluster()} are also passed as options to {it:pgmname}. See example 10 below.
+with the {it:varlist} contents of {cmd:permute(}{it:varlist}{cmd:)} passed as the first argument and {it: options} passed as options (see example 10 below).
+By default, {cmd:strata()} and {cmd:cluster()} are also passed as options to {it:pgmname} if they were specified. 
+As an example, suppose you have a program that accepts a custom string option, shuffles multiple permuted variables, and supports stratification and clustering. 
+Specify your command and your custom option with the code {cmd:permuteprogram(myprogram, option1("myoption"))}.
+In your program, parse the inputs using the {help syntax:syntax} command:
+
+{p 12 12 2} {cmd:. syntax varlist [, strata(varname) cluster(varname) option1(string)]}
 
 {p 4 8 2}
 {cmd:force} allows the user to include a model with clustered standard errors without also specifying the {cmd:cluster()} bootstrap option,
@@ -227,7 +232,7 @@ sizes across bootstraps/permutations.
 
 {col 8}{cmd:. {stata wyoung mpg headroom turn, cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) strata(stratum) seed(20)}}
 
-{p 4 4 2}10. Perform the Westfall-Young adjustment using permutation with a customized assignment program (3 hypotheses).
+{p 4 4 2}10. Perform the Westfall-Young adjustment using permutation with a customized assignment program designed to shuffle one variable (3 hypotheses).
 
 {col 8}{cmd: {stata program define myshuffle}}
 
