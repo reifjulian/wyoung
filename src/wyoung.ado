@@ -1,7 +1,8 @@
-*! wyoung 1.3.3 18jan2024 by Julian Reif
+*! wyoung 2.0 3dec2024 by Julian Reif
+* 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps and set default to 100. fixed factor variables bug
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
-* 1.3.1: new controls option functionality. Old functionality moved to controlsinteract
+* 1.3.1: new controls option functionality. old functionality moved to controlsinteract
 * 1.3: controls option added
 * 1.2: familyp option now supports multiple variables. subgroup option added
 * 1.1: familyp option now supports the testing of linear and nonlinear combinations of parameters
@@ -16,15 +17,15 @@
 ***
 
 * K = number of hypotheses = num subgroups X num familyp X num outcomes X num controls
-* N = number of bootstraps
+* N = number of bootstraps/permutations
 
 program define wyoung, rclass
 
-	version 12
+	version 13
 
 	* Syntax 1: one model with multiple outcomes (and possibly multiple controls and subgroups)
-	syntax [varlist(default=none)], cmd(string) BOOTstraps(int) familyp(string) [weights(varlist) noRESAMPling seed(string) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp replace]
-	
+	syntax [varlist(default=none)], cmd(string) familyp(string) [Reps(numlist int max=1 >0) BOOTstraps(numlist int max=1 >0) weights(varlist) noRESAMPling seed(numlist max=1) strata(varlist) cluster(varlist) subgroup(varname numeric) controls(string asis) controlsinteract(string asis) force detail SINGLEstep familypexp permute(varlist) PERMUTEProgram(string) replace]
+
 	local outcome_vars "`varlist'"
 	
 	* Syntax 2: different models
@@ -41,18 +42,19 @@ program define wyoung, rclass
 	
 	tempfile bs
 	tempname mat nlcom_b nlcom_V
-	
+
 	******
 	* Error check syntax options
 	******	
 
-	* N = number of bootstraps
-	local N = `bootstraps'
-	capture assert `N' > 0
-	if _rc {
-		di as err "bootstrap size must be greater than zero"
+	* N = number of bootstraps/permutations (default=100). Provide legacy support for bootstraps() option.
+	if "`reps'"!="" & "`bootstraps'"!="" {
+		di as error "cannot specify both reps() and bootstraps()"
 		exit 198
-	}	
+	}
+	if "`reps'"=="" local reps `bootstraps'
+	if "`reps'`bootstraps'"=="" local reps=100	
+	local N = `reps'
 	
 	* Seed option
 	if !mi("`seed'") {
@@ -63,24 +65,74 @@ program define wyoung, rclass
 		}
 	}
 	
-	* Strata option
-	local bs_strata ""
-	if !mi("`strata'") {
-		local bs_strata "strata(`strata')"
-	}
+	* Strata and cluster options
+	if !mi("`strata'") local strata_option "strata(`strata')"
 	
-	* Cluster option
 	if !mi("`cluster'") {
-		tempname id_cluster
-		local bs_cluster "cluster(`cluster') idcluster(`id_cluster')"
+		local cluster_option "cluster(`cluster')"
+		
+		* Bootstrapping will require a cluster ID variable
+		if "`permute'"=="" {
+			tempname id_cluster
+			local idcluster_option "idcluster(`id_cluster')"
+		}
+		
+		* Permutation var must be constant within strata/cluster groups (within-group stdev should be 0)
+		if "`permute'"!="" {
+			tempvar group
+			egen long `group' = group(`strata' `cluster')
+			foreach v of varlist `permute' {
+				qui loneway `permute' `group'
+				if r(sd_w) != 0 & !mi(r(sd_w)) {
+					di as err "permutation variable `permute' is not constant within clusters"
+					exit 9
+				}
+			}
+			drop `group'
+		}
 	}
 	
+	* Permute option (default is bootstrapping)
+	if "`permute'"!="" {
+		foreach v of varlist `permute' {
+			cap assert !mi(`v')
+			if _rc & "`force'"=="" {
+				di as error "permutation variable " as result "`v'" as error " has missing values; specify {bf:force} to override"
+				exit 416
+			}
+			if _rc & "`force'"!="" {
+				di as error "Warning: permutation variable " as result "`v'" as error " has missing values" _n
+			}
+		}
+	}
+	
+	* Permute program option (default is _wyoung_shuffle)
+	if `"`permuteprogram'"'!="" {
+
+		if "`permute'"=="" {
+			di as error "permute() required when specifying permuteprogram()"
+			exit 198
+		}
+	
+		* Split out cmd name and cmd options
+		gettoken permutecmd 0: permuteprogram, parse(" ,")
+		syntax [, *]
+		local permutecmd_options `"`options'"'
+		
+		* Confirm valid program was passed as argument
+		cap which `permute_cmd'
+		if !_rc {
+			qui program list `program_name'
+		}
+	}
+	else local permutecmd _wyoung_shuffle
+
 	* Detail options
 	if "`detail'"!="" & "`resampling'"=="noresampling" {
 		di as error "cannot specify both the detail and noresampling options"
 		exit 198
 	}
-	
+
 	* Subgroup option
 	local num_subgroups = 1
 	qui if "`subgroup'"!="" {
@@ -102,7 +154,7 @@ program define wyoung, rclass
 		}
 
 		* Subgroup option triggers stratified resampling, unless user overrides
-		if mi("`strata'") local bs_strata "strata(`subgroup')"
+		if mi("`strata'") local strata_option "strata(`subgroup')"
 		
 		* Subgroup option not allowed with a command that contains an "if" 
 		if strpos(`"`cmd'"', " if ") {
@@ -120,6 +172,12 @@ program define wyoung, rclass
 		di as error "cannot have {it:CONTROLVARS} without specifying option {cmd:controls()} or {cmd:controlsinteract()}"
 		exit 198		
 	}	
+	
+	* Cannot specify both CONTROLS and CONTROLVARS
+	if (`"`controlsinteract'"'!="" & `"`controls'"'!="") {
+		di as error "cannot specify both {cmd:controls()} and {cmd:controlsinteract()}"
+		exit 198
+	}
 	
 	* Controlsinteract option (multiplies number of hypotheses being tested)
 	local num_sets_controls = 1
@@ -199,7 +257,8 @@ program define wyoung, rclass
 		* If user specified familypexp (rare), then the input is a single lincom/nlcom expression, not a varlist
 		local num_familypvars = 1
 		if "`familypexp'"=="" {
-			fvunab familyp : `familyp'
+			_wyoung_fvexpandnobase `familyp'
+			local familyp `r(varlist)'
 			local num_familypvars : word count `familyp'
 		}
 
@@ -414,7 +473,7 @@ program define wyoung, rclass
 			cap confirm number `df'
 			if !_rc scalar `p_`k'' = tprob(`df', abs(`tstat'))
 			else    scalar `p_`k'' = 2*(1-normprob(abs(`tstat')))
-			
+
 			if `p_`k''==. {
 				noi di as error "p-value not available and could not be calculated when running the command " as result `"`cmdline_`k''"'
 				exit 504
@@ -422,42 +481,62 @@ program define wyoung, rclass
 		}
 	}
 
-	* Issue error if user is estimating a model with clustered standard errors AND did not specify a bootstrap cluster (unless force option specified)
-	if "`vce_cluster'"=="1" & mi("`cluster'") & mi("`force'") {
-			di as error "estimating model with clustered standard errors, but {bf:cluster()} option was not specified"
+	* Issue error if user is estimating a model with clustered standard errors AND did not specify a resampling cluster (unless force option specified)
+	if "`vce_cluster'"=="1" & mi("`cluster'") {
+		if mi("`force'") {
+			di as error "estimating model with clustered standard errors, but {bf:cluster()} option was not specified; specify {bf:force} to override"
 			exit 198
+		}
+		else {
+			di as error "Warning: estimating model with clustered standard errors, but {bf:cluster()} option was not specified" _n
+		}
 	}
 
 	preserve
 	
 	******
-	* Use bootstrapping to resample the data, and calculated Westfall-Young adjusted p-vals
+	* Resample the data and calculated Westfall-Young adjusted p-vals
 	******	
 	if "`resampling'"!="noresampling" {
+		
+		if "`permute'"=="" noi di as text _n "Performing " as result "`reps' " as text "bootstrap replications..."
+		else               noi di as text _n "Performing " as result "`reps' " as text "permutations..."		
 
 		***
-		* Step 2(a). Loop over each bootstrap i and calculate pstar's
+		* Step 2(a). Loop over each sample i and calculate pstar's
 		***
 		qui forval i = 1/`N' {
 
-			* Draw a (possibly stratified, possibly clustered) random sample with replacement
-			bsample, `bs_strata' `bs_cluster'
-			if "`bs_cluster'"!="" {
-				drop `cluster'
-				ren `id_cluster' `cluster'
-			}
+			* Do a permutation, OR draw a random sample with replacement
+			if "`permute'"!="" {
+				
+				* Default permute program is _wyoung_shuffle
+				`permutecmd' `permute', `strata_option' `cluster_option' `permutecmd_options' 
+            }
+            else {
+                bsample, `strata_option' `cluster_option' `idcluster_option'
+				
+				if "`cluster'"!="" {
+					drop `cluster'
+					ren `id_cluster' `cluster'
+				}				
+            }
 
 			* Calculate pstar for each model, using test or testnl
 			qui forval k = 1/`K' {
 
 				cap `cmdline_`k''
 				if _rc {
-					noi di as error _n "The following error occurred when running the command " as result `"`cmdline_`k''"' as error " on a bootstrap sample:"
+					noi di as error _n "The following error occurred when running the command " as result `"`cmdline_`k''"' as error " on a bootstrap/permutation sample:"
 					error _rc
 				}
 				local Ni_`k' = e(N)
-				
-				cap test `familyp_`k'' == `beta_`k''
+
+				* Under permutation (randomization inference), which breaks link between X and Y, we test the null coef = 0. Under bootstrapping, which preserves link between X and Y, we test coef = original beta
+				if ("`permute'"!="") local complete_null = 0
+				else                 local complete_null = `beta_`k''
+
+				cap test `familyp_`k'' == `complete_null'
 				if _rc==131 {
 					cap testnl `familyp_`k'' == `beta_`k''
 					if _rc {
@@ -466,7 +545,7 @@ program define wyoung, rclass
 					}
 				}
 				else if _rc {
-					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `beta_`k''"' as error " on a bootstrap sample:"					
+					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `beta_`k''"' as error " on a bootstrap/permutation sample:"					
 					test `familyp_`k'' == `beta_`k''
 				}
 				local pstar_`k' = r(p)
@@ -546,7 +625,7 @@ program define wyoung, rclass
 		replace p  = `p_`k''                   if k==`k'
 		replace familyp = "`familyp_`k''"                                          if k==`k'
 		if !mi("`subgroup'")           replace subgroup = `subgroup_`k''           if k==`k'
-		if !mi(`"`controlsinteract'"') replace controlspec = "`controls_`k''" if k==`k'
+		if !mi(`"`controlsinteract'"') replace controlspec = "`controls_`k''"      if k==`k'
 		if !mi("`detail'")             replace N        = `N_`k''                  if k==`k'
 	}	
 	
@@ -576,9 +655,9 @@ program define wyoung, rclass
 	cap label var pwyoung   "Westfall-Young adjusted p-value"
 	cap label var pwyoung1 "Westfall-Young adjusted p-value (single-step)"
 	cap label var N "Number of obs"
-	cap label var Navg "Average number of obs (bootstraps)"
-	cap label var Nmin "Min number of obs (bootstraps)"
-	cap label var Nmax "Max number of obs (bootstraps)"
+	cap label var Navg "Average number of obs (reps)"
+	cap label var Nmin "Min number of obs (reps)"
+	cap label var Nmax "Max number of obs (reps)"
 	
 	assert psidak<=pbonf+0.00000000001
 	foreach v of varlist p* {
@@ -612,5 +691,115 @@ program define wyoung, rclass
 	return local cmd wyoung
 end
 
-** EOF
+* Default permutation program
+program define _wyoung_shuffle
 
+	syntax varlist(min=1) [, strata(varname) cluster(varname)]
+
+	tempvar randsort clfirst n_init
+
+	* If no cluster var is specified, each individual observation will be a "cluster"
+	if "`cluster'"=="" {
+		tempvar cluster
+		gen long `cluster' = _n
+	}
+
+	* Identify first observation in each cluster
+	sort `strata' `cluster', stable
+	by `strata' `cluster': gen byte `clfirst' = 1 if _n==1		
+	
+	* Within strata, for all first observations within clusters, save their position in the data set
+	sort `strata' `clfirst', stable
+	by `strata' `clfirst': gen long `n_init' = _n if `clfirst'!=.
+	
+	* Reshuffle these first observations within strata, and take the treatment status from the observation which was at this position before
+	gen double `randsort' = runiform()
+	sort `strata' `clfirst' `randsort', stable
+	foreach var in `varlist' {		
+		tempvar new`var'
+		local type : type `var'
+		by `strata' `clfirst': gen `type' `new`var'' = `var'[`n_init']
+	}
+	
+	* Copy treatment status to all observations in the same cluster
+	sort `strata' `cluster' `clfirst', stable
+	foreach var in `varlist' {
+		by `strata' `cluster': replace `new`var'' = `new`var''[_n-1] if mi(`new`var'')
+		drop `var'
+		ren `new`var'' `var'
+	}
+end
+
+/* EXAMPLE SHUFFLES (QC code)
+
+* Simple shuffle
+set seed 21
+qui forval x = 1/100 {
+	noi di "`x'"
+	set seed `x'
+sysuse auto, clear
+label drop origin
+gen cluster = floor(mpg/5)
+gen strata = floor(mod(_n,7))
+drop price-gear_ratio
+gen foreign0 = foreign
+
+_wyoung_shuffle foreign
+egen sum1 = sum(foreign0)
+egen sum2 = sum(foreign)
+assert sum1==sum2
+drop sum* foreign
+gen foreign = foreign0
+
+
+* Stratified shuffle
+_wyoung_shuffle foreign, strata(strata)
+sort strata
+by strata: egen sum1 = sum(foreign0)
+by strata: egen sum2 = sum(foreign)
+assert sum1==sum2
+drop sum* strata foreign foreign0
+
+* Cluster shuffle
+bysort cluster: gen byte t = round(uniform()) if _n==1
+by cluster: egen foreigncl = mean(t)
+gen foreigncl0 = foreigncl
+drop t
+preserve
+
+_wyoung_shuffle foreigncl, cluster(cluster)
+bysort cluster: keep if _n==1
+egen sum1 = sum(foreigncl0)
+egen sum2 = sum(foreigncl)
+assert sum1==sum2
+drop sum*
+restore
+
+* Stratified clustered shuffle
+bysort cluster: gen byte t = round(uniform()) if _n==1
+by cluster: egen stratacl = mean(t)
+drop t
+_wyoung_shuffle foreigncl, cluster(cluster) strata(stratacl)
+bysort cluster: keep if _n==1
+bysort stratacl: egen sum1 = sum(foreigncl0)
+bysort stratacl: egen sum2 = sum(foreigncl)
+assert sum1==sum2
+	}
+*/
+
+
+program _wyoung_fvexpandnobase
+    
+	* Record original setting
+	local fvbase = c(fvbase)
+	set fvbase off
+
+	cap noi fvexpand `0'
+
+	* Restore original setting
+	set fvbase `fvbase'
+
+	if _rc exit _rc
+end
+
+** EOF
