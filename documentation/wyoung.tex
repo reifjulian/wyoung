@@ -1,0 +1,349 @@
+\documentclass[letterpaper,12pt]{article}
+\usepackage[utf8]{inputenc}
+
+\usepackage[T1]{fontenc}
+\usepackage{graphicx,graphics}
+\usepackage{standalone}
+\usepackage{amssymb,amsmath,amsthm,amsfonts}
+\usepackage{natbib}
+\usepackage{multibib}
+\usepackage{subcaption}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{dcolumn}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[colorlinks=true,citecolor=blue,linkcolor=red,urlcolor=Maroon,breaklinks=true]{hyperref}
+\usepackage{pdflscape}
+\usepackage{url}
+\usepackage{setspace}
+%Setting exact margins: 1 inch on all sides
+\usepackage[margin=1in]{geometry}
+
+\usepackage{enumitem}
+
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}} 
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% (1) Cover page
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{center}
+
+    % Suppress page number
+    \thispagestyle{empty}
+    
+    {\Large \textbf{Documentation for wyoung}}
+    
+    \bigskip
+    
+    January 2026
+\end{center}
+
+\noindent \textbf{wyoung} is a Stata command designed to control the family-wise error rate when performing multiple hypothesis tests. This document outlines the algorithm employed by \textbf{wyoung} and presents simulation results that demonstrate its effectiveness across various settings. To install the command and access its help file, type \textbf{ssc install wyoung, replace} at the Stata prompt. The latest development version is available for download on GitHub:
+
+\noindent \url{https://github.com/reifjulian/wyoung} 
+\\
+
+\noindent After installation, type \textbf{help wyoung} at the Stata prompt to view examples and learn the syntax. Companion Stata code for the simulations described below is available on GitHub:
+
+\noindent \url{https://reifjulian.github.io/wyoung/documentation/simulations/wyoung_simulations.do}
+\\
+
+\noindent \textbf{wyoung} was originally developed for use in the \href{https://www.nber.org/workplacewellness}{Illinois Workplace Wellness Study}. Please cite the command as \citet*{Jones2019}:
+\\
+
+
+\noindent Jones, Damon, David Molitor, and Julian Reif. ``What Do Workplace Wellness Programs Do? Evidence from the Illinois Workplace Wellness Study.'' \textit{Quarterly Journal of Economics}, November 2019, 134(4): 1747--1791. 
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Main text
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\setcounter{table}{0}
+\setcounter{figure}{0}
+\setcounter{footnote}{0}
+\setcounter{page}{1}
+
+\section{Methodology}
+
+Multiple hypotheses arise when there are multiple outcomes, subgroups, or independent parameters of interest. Consider testing $K>1$ distinct null hypotheses. The family-wise error rate (FWER) is the probability of rejecting at least one true null hypothesis---commonly referred to as making a ``false discovery''---within this ``family'' of $K$ hypotheses. A procedure is said to provide \textit{strong control} of the FWER if it maintains the error rate at or below a specified level regardless of how many of the $K$ hypotheses are true. In contrast, \textit{weak control} of the FWER applies only under the assumption that all $K$ hypotheses are true, i.e., when the complete null hypothesis holds.
+
+\textbf{wyoung} controls the FWER using the free step-down resampling method of \citet{Westfall:1993} (Algorithm 2.8, pp. 66–67). This method leverages resampling techniques, such as bootstrapping (sampling with replacement) or permutation (shuffling), to adjust the standard $p$-values obtained from model estimation. A detailed description of the algorithm is provided below.
+
+\subsection{Bootstrapping} \label{SS - Bootstrapping}
+The bootstrapping procedure involves the following steps:
+
+\begin{enumerate}
+    \item Estimate \{$\widehat{\beta}_1,\widehat{\beta}_2,...,\widehat{\beta}_K$\}. Calculate the conventional, unadjusted $p$-values \{$p_1,p_2,...,p_K$\} for individual tests of the null hypotheses $\widehat{\beta}_k=0$.%
+    %
+    \footnote{Alternative hypotheses are also possible, including tests of linear or nonlinear combinations of coefficients (see Section \ref{SS-combination}).}
+    %
+    Without loss of generality, assume the $p$-values are indexed such that $p_1 \leq p_2 \leq...\leq p_K$.
+    
+    \item Draw with replacement from the dataset to create a bootstrap sample.
+    \begin{enumerate}
+    
+        \item Compute the bootstrap estimates \{$\widehat{\beta}^\ast_{i1},\widehat{\beta}^\ast_{i2},...,\widehat{\beta}^\ast_{iK}$\}. Calculate the conventional, unadjusted $p$-values \{$p_{i1}^\ast,p^\ast_{i2},...,p^\ast_{iK}$\} for individual tests of the null hypotheses $\widehat{\beta}^\ast_{ik}=\widehat{\beta}_k$. The $k$ index here corresponds to the ranking computed in step 1. It will not generally be the case that $p^\ast_{i1} \leq p^\ast_{i2} \leq...\leq p^\ast_{iK}$.
+    
+        \item Enforce monotonicity with respect to the original ordering in step 1 by computing the successive minima:
+            \begin{align}
+                q^\ast_{iK}&=p^\ast_{iK} \nonumber \\
+                q^\ast_{i,K-1}&=\min(q^\ast_{iK},p^\ast_{i,K-1}) \nonumber \\
+                q^\ast_{i,K-2}&=\min(q^\ast_{i,K-1},p^\ast_{i,K-2}) \nonumber \\[-.1cm]
+                &\vdots \nonumber  \\
+                q^\ast_{i1}&=\min(q^\ast_{i2},p^\ast_{i1}) \nonumber
+            \end{align}
+
+    \end{enumerate}
+    
+    \item Repeat step 2 $N$ times. For each bootstrap sample $i$ and hypothesis $k$, define the indicator $COUNT_{ik}=1$ if $q^\ast_{ik} \leq p_{k}$ and 0 otherwise.%
+    %
+    \footnote{To compute ``single-step'' $p$-values instead of ``step-down'' $p$-values, define the indicator $COUNT_{ik}=1$ if $\min \{p^\ast_{i1},p^\ast_{i2},...,p^\ast_{iK}\}<p_k$ and 0 otherwise. Resampling-based single-step methods often control family-wise type III (sign) error rates. Whether their step-down counterparts also control type III error rates is unknown \citep[][p. 51]{Westfall:1993}.}
+    %
+    
+    \item For each hypothesis $k=1,2,...,K$, calculate the fraction of successive minima that were lower than the original $p$-value: 
+    \begin{align}
+    r_k= \frac{1}{N} \sum_{i=1}^{N} COUNT_{ik} \nonumber
+    \end{align}
+    
+    \item Enforce monotonicity using successive maximization to calculate the adjusted $p$-value:
+            \begin{align}
+                p^{adj}_1&=r_1 \nonumber \\
+                p^{adj}_2&=\max(r_1,r_2) \nonumber \\[-.1cm]
+                &\vdots \nonumber  \\
+                p^{adj}_K&=\max(r_{K-1},r_K) \nonumber
+            \end{align}    
+    
+\end{enumerate}
+
+This resampling algorithm provides strong control of the FWER under the condition of subset pivotality, a multivariate generalization of pivotality.%
+%
+\footnote{The sampling distribution of a pivotal statistic does not depend on the specific distribution that generated the data; the $t$-statistic is a common example. }
+%
+Subset pivotality requires that the joint distribution of any subvector of $p$-values remains unaffected by the truth or falsehood of hypotheses corresponding to $p$-values not included in the subvector. This condition is satisfied in many settings, including significance testing for coefficients in a general multivariate regression model with possibly non-normal or heteroskedastic errors \citep[][pp. 122–123]{Westfall:1993}. If subset pivotality does not hold, the procedure provides only weak control of the FWER. In this case, the adjustment is valid solely for the smallest $p$-value. One notable example of subset pivotality failure arises in tests involving overlapping subgroups. Consider a scenario where hypothesis 1 tests whether an effect exists for the entire group, and hypothesis 2 tests whether the effect exists specifically for women. If hypothesis 2 is true, hypothesis 1 must also be true, creating a dependency between the hypotheses that violates the subset pivotality condition.%
+%
+\footnote{In principle, it is possible for an effect in one subgroup to perfectly offset the effect in other subgroups, resulting in no overall effect. However, if treatment effects are heterogeneous and drawn from a continuous distribution, the probability of such an exact cancellation is zero.}
+
+It is possible for this algorithm to produce adjusted $p$-values that are smaller than unadjusted $p$-values. For instance, in the extreme case where only one bootstrap sample is used ($N = 1$ in steps 3 and 4), all adjusted $p$-values are either zero or one. Those equal to zero will, of course, be smaller than the unadjusted values. To avoid this issue, we recommend using a large number of bootstrap draws. \citet{Westfall:1993} recommend at least 10,000 bootstrap draws. If adjusted $p$-values consistently lie below the unadjusted $p$-values, even when the number of bootstraps is large, this may indicate model misspecification. For example, in simulations with clustered errors (described below), we found that adjusted $p$-values were often smaller than unadjusted values if a cluster bootstrap was not employed.
+
+\subsection{Permutation} \label{SS - Permutation}
+
+The permutation procedure follows the bootstrapping approach described above.%
+%
+\footnote{Thanks to Adam Sacarny for helping implement the permutation procedure.}
+%
+However, it includes one key modification in step 2(a), where a sharp null hypothesis is tested:
+
+\begin{enumerate}[start=2]
+    \item Permute (shuffle) the data under the null hypothesis.
+    \begin{enumerate}
+    \item Compute the shuffled estimates \{$\widehat{\beta}^\ast_{i1},\widehat{\beta}^\ast_{i2},...,\widehat{\beta}^\ast_{iK}$\}. Calculate the conventional, unadjusted $p$-values \{$p_{i1}^\ast,p^\ast_{i2},...,p^\ast_{iK}$\} for individual tests of the sharp null hypotheses \mbox{$\widehat{\beta}^\ast_{ik}=0$}. The $k$ index here corresponds to the ranking computed in step 1. It will not generally be the case that $p^\ast_{i1} \leq p^\ast_{i2} \leq...\leq p^\ast_{iK}$.
+    \end{enumerate}
+\end{enumerate}
+
+Permutation breaks the link between the shuffled variable and the outcome, producing a sharp null hypothesis that assumes an exact treatment effect of zero for all observations. In \textbf{wyoung}, permuting a variable by default also severs its association with all other covariates. However, users can optionally specify that multiple variables be permuted jointly if the analysis requires preserving their relationship.
+
+As with bootstrapping, this permutation algorithm requires subset pivotality in order to provide strong control of the FWER. \citet{Westfall:1993} note that this condition must hold exactly for permutation analyses ``provided that only one test per [outcome] variable is performed'' (p. 115).
+
+The hypothesis tests performed in step 2(a) (and 1(a)) rely on standard normal-theory approximations rather than permutation. While permutation could theoretically be used to compute these tests, doing so would scale computational complexity with order $N^2$ rather than $N$, making the algorithm impractical for many applications. To assess whether this simplification compromises validity, we recommend comparing unadjusted $p$-values derived from permutation with those based on normal-theory approximations. Significant discrepancies between the two indicate that the adjusted $p$-values may be unreliable.
+
+\section{Simulations}
+We conducted simulations to evaluate the effectiveness and statistical power of the resampling algorithm described in Section \ref{SS - Bootstrapping}. Let $\mu$ be a ten-dimensional zero vector $(0,0,...,0)'$. Let $I$ be a $10 \times 10$ identity matrix. Let $\Sigma$ be a $10 \times 10$ covariance matrix where all off-diagonal elements are equal to 0.9. The data-generating process for each simulation scenario is described below:
+
+\begin{enumerate}
+    \item Normal i.i.d. errors (ten outcomes)
+    
+    $e \sim \mathcal{N} (\mu,I)$
+    
+    $Y=e$
+
+    \item Normal i.i.d. errors (one outcome, ten subgroups)
+    
+    $e \sim \mathcal{N} (0,1)$
+    
+    $Y=e$
+    
+    \item Correlated errors (ten outcomes)
+    
+    $X \sim \mathcal{N} (\mu,I)$
+    
+    $e \sim \mathcal{N} (\mu,\Sigma)$
+    
+    $Y=0.2 X + e$
+    
+    \item Lognormal, mean-zero i.i.d. errors (ten outcomes)\footnote{The mean of the standard lognormal distribution is $\sqrt{\exp[1]}$.}
+    
+    $e \sim \exp[\mathcal{N} (\mu,I)]-\sqrt{\exp[1]}$
+    
+    $Y=e$
+    
+\end{enumerate}
+We simulated 2,000 datasets for each of these four data-generating processes. In each of these 2,000 simulations, we estimated a series of 10 regressions:
+\begin{equation}
+Y_{i}=\alpha+ \beta_i X_{i}+\varepsilon _{i} , i=1...10
+\label{eqn:simulation}\nonumber.
+\end{equation}
+The sample size for each regression was 100. The regressor $X_i\sim \mathcal{N}(0,1)$ in scenarios 1, 2, and 3. In scenario 4, the regressor is just a constant equal to one ($\alpha$ is omitted). There are ten null hypotheses that correspond to these ten regressions: $\beta_i=0, i=1,...,10$. These ten null hypotheses are all true in scenarios 1, 2, and 4; the hypotheses are all false in scenario 3 (correlated errors).
+
+Table \ref{tab:wyoung1} compares the effectiveness of the Westfall-Young resampling algorithm to other well-known multiple inference adjustment methods.%
+%
+\footnote{The Bonferroni-Holm and Sidak-Holm (step-down) $p$-values are calculated as follows. Sort the $K$ unadjusted $p$-values so that $p_1 \leq p_2 \leq...\leq p_K$.  The Bonferroni-Holm adjusted $p$-values are calculated as $\{p_1 K,\max[p_1 K,p_2 (K-1)],\ldots, \max[p_1 K, p_2 (K-1), \ldots,p_K]\}$.  The Sidak-Holm adjusted $p$-values are calculated as $\{1-(1-p_1)^K, \max[1-(1-p_1)^K,1-(1-p_2)^{(K-1)}],\ldots, \max[1-(1-p_1)^K,1-(1-p_2)^{(K-1)},\ldots,p_K]\}$. If the calculation yields a value larger than one, then the adjusted $p$-value is set equal to one.} 
+%
+Each column in the table reports how often at least one null hypothesis was rejected using each adjustment method. When outcomes are independent and normally distributed, the probability that at least one of the ten hypotheses is statistically significant is equal to $1-(1-0.05)^{10}=0.401$. This calculation accords well with the simulation: the first row of column (1) reports that at least one of the ten hypotheses was rejected at $\alpha=0.05$ in 39.8 percent of the 2,000 simulations when no adjustment was performed. By contrast, the Bonferroni-Holm, Sidak-Holm, and Westfall-Young adjustments reject at least one null hypothesis only about 4 percent of the time, thus achieving a FWER of less than 5 percent. 
+
+In column (2), the ten hypotheses arise from examining multiple subgroups rather than multiple outcome variables. Failing to adjust the $p$-values again results in a high rejection rate of nearly 40 percent. The Bonferroni-Holm, Sidak-Holm, and Westfall-Young adjustment methods, however, all achieve rejection rates of around 5 percent. 
+
+A key limitation of the Sidak-Holm adjustment is its reliance on independence among outcomes; moreover, both Bonferroni-Holm and Sidak-Holm can be overly conservative, resulting in a loss of power, when outcomes are correlated. This loss of power is evident in column (3), which reports rejection rates for a scenario where the ten null hypotheses are all false. Under these conditions, the Bonferroni-Holm and Sidak-Holm methods reject at least one hypothesis in only about 35 percent of simulations. By contrast, the Westfall-Young resampling algorithm, which accounts for correlations among outcomes, achieves a rejection rate in excess of 50 percent, demonstrating its superior performance in this context.
+
+Although traditional adjustment methods such as Bonferroni-Holm and Sidak-Holm are generally thought to be conservative, \citet{Westfall:1993} emphasize that these traditional methods can actually over-reject when the data-generating process is nonnormal. Column (4) illustrates this issue: the resampling method of Westfall-Young achieves a FWER below 6 percent, whereas the Bonferroni-Holm and Sidak-Holm methods incorrectly reject at least one null hypothesis in more than 20 percent of simulations, far exceeding the target threshold of 5 percent.
+
+
+\subsection{Clustered standard errors}\label{SS - cluster}
+
+\noindent \citet{Westfall:1993} do not discuss methods for conducting multiple inference in regression models where observations are grouped into clusters and model errors exhibit within-cluster correlation. While clustered errors do not violate subset pivotality---a condition automatically satisfied in standard linear regression models---it is important to adapt the resampling procedure in step 2 to account for clustering. Specifically, the resampling must be performed over entire clusters rather than individual observations. This adjustment can be accomplished by specifying the \textbf{cluster()} option in the \textbf{wyoung} command.
+
+To illustrate the importance of resampling over clusters, we conducted an additional set of simulations. Let $\mu$ be a ten-dimensional zero vector $(0,0,...,0)'$, and let $I$ be a $10 \times 10$ identity matrix. The data-generating process for this simulation scenario is:
+\begin{enumerate}
+    \setcounter{enumi}{4}
+    \item Serially correlated errors (ten outcomes)
+    
+    $i=1...100$ clusters
+    
+    $t=1...10$ time periods
+    
+    $\eta_i \sim \mathcal{N} (\mu,I)$
+    
+    $e_{it} \sim \mathcal{N} (\mu,I)$
+    
+    $Y_{it} = \eta_i + e_{it}$
+\end{enumerate}
+
+We again simulated 2,000 datasets. In each simulation, we estimated the following ten regressions:
+\begin{equation}
+Y_{it}=\alpha+ \beta_i D_{it}+\varepsilon _{it} , i=1...10
+\label{eqn:simulation2}\nonumber,
+\end{equation}
+where the dummy variable $D_{it}=1\{t>START_i\}$ and $START_i$ is a Poisson random variable with mean equal to five. These regressions were estimated under two different assumptions about the standard errors (homoskedastic or clustered) and with and without a bootstrap cluster. The results are presented in Table \ref{tab:wyoung2}.
+
+Comparing column (2) to column (1) in the first row of Table \ref{tab:wyoung2}, we observe that clustering the standard errors results in a smaller FWER relative to assuming homoskedasticity. However, the rejection rate for the unadjusted value in column (2) still significantly exceeds 5 percent, as it does not account for the number of hypotheses being tested.%
+%
+\footnote{The unadjusted, Bonferroni-Holm, and Sidak-Holm values do not vary across columns (2) and (3) because these two columns differ only in their bootstrapping methodology, which affects only the Westfall-Young correction.}
+
+The second and third rows of Table \ref{tab:wyoung2} show that the Bonferroni-Holm and Sidak-Holm corrections achieve an FWER of less than 5 percent when the standard errors are clustered. This result is expected, as the outcome variables in this simulation are independent.
+
+The fourth row of Table \ref{tab:wyoung2} highlights the importance of properly accounting for clustered standard errors when implementing the Westfall-Young correction. Column (2) shows that (erroneously) employing a simple bootstrap that resamples over individual observations, rather than clusters, causes the Westfall-Young correction to perform worse than the unadjusted specification. However, column (3) shows that employing a cluster bootstrap restores the Westfall-Young correction's ability to control the FWER at 5 percent.
+
+\subsection{Multiple regressors}\label{SS-multiple regressors}
+
+The simulations described above address scenarios involving multiple outcomes or multiple subgroups. Another common context for multiple hypotheses testing arises when there are multiple coefficients of interest within the same model. The Westfall-Young adjustment exhibits strong control of the FWER in this setting as well \citep[][p. 134]{Westfall:1993}. 
+
+To assess the effectiveness of the adjustment in this setting, we conducted additional simulations. Let $\mu$ be a ten-dimensional zero vector $(0,0,...,0)'$, and let $I$ be a $10 \times 10$ identity matrix. The data-generating process for this simulation scenario is:
+
+\begin{enumerate}
+\setcounter{enumi}{5}
+\item Normal i.i.d. errors (ten outcomes, two regression coefficients)
+    
+    $D_1 \sim 1\{\mathcal{U} (0,1)>0.5\}$
+    
+    $D_2 \sim 1\{\mathcal{U} (0,1)>0.5\}$    
+    
+    $e \sim \mathcal{N} (\mu,I)$
+    
+    $Y = e$  
+\end{enumerate}
+
+We simulated 2,000 datasets using this data-generating process. In each simulation, we estimated a series of 10 regressions:
+\begin{equation}
+Y_{i}=\alpha+ \beta_{i1} D_{1}+ \beta_{i2} D_{2}+\varepsilon _{i} , i=1...10
+\label{eqn:simulation3}\nonumber.
+\end{equation}
+The sample size for each regression was 100. Across the 10 regressions, we tested 20 null hypotheses: $\beta_1=0$ and $\beta_2=0$. All null hypotheses are true by construction. 
+
+Column (1) of Table \ref{tab:wyoung3} shows that without any adjustment, the rejection rate exceeds 60 percent. However, applying a multiple-testing adjustment reduces the rejection rate to approximately 4 percent, successfully controlling the FWER below the target threshold of 5 percent.
+
+\subsection{Linear and nonlinear combinations}\label{SS-combination}
+
+
+\textbf{wyoung} enables researchers to perform multiple inference when testing hypotheses about any linear or nonlinear combination of coefficients. To evaluate its effectiveness, we conducted simulations testing both linear and nonlinear restrictions involving two regression coefficients. Let $\mu$ be a ten-dimensional zero vector $(0,0,...,0)'$. Let $I$ be a $10 \times 10$ identity matrix. The data-generating process is:
+\begin{enumerate}
+    \setcounter{enumi}{6}
+    \item Multiple restrictions (ten outcomes)
+    
+    $X_1 \sim \mathcal{N} (\mu,I)$
+    
+    $X_2 \sim \mathcal{N} (\mu,I)$
+    
+    $e \sim \mathcal{N} (\mu,I)$
+    
+    $Y=2 X_1 + 0.5 X_2 + e$
+\end{enumerate}
+
+We simulated 2,000 datasets using this data-generating process. In each simulation, we estimated a series of 10 regressions:
+\begin{equation}
+Y_{i}=\alpha+ \beta_{i1} X_{i1}+ \beta_{i2} X_{i2}+\varepsilon _{i} , i=1...10
+\nonumber.
+\end{equation}
+The sample size for each regression was 100. We separately tested the following two sets of 10 null hypotheses: (1) the linear restriction $ \beta_{i1} - 4\beta_{i2} = 0$; and (2) the nonlinear restriction $ \beta_{i1} \beta_{i2} - 1 = 0$. Both these null hypotheses are true by construction. 
+
+The results, reported in Columns (2) and (3) of Table \ref{tab:wyoung3}, show that rejection rates exceed 40 percent when no adjustment is applied. By contrast, the rejection rates for adjusted $p$-values are approximately 5 percent for the linear restriction and 6 percent for the nonlinear restriction, demonstrating that \textbf{wyoung} effectively controls the FWER in both scenarios.
+
+\subsection{Permutation}
+
+The simulations described above employed the bootstrapping algorithm outlined in Section  \ref{SS - Bootstrapping}. Next, we compare the performance of this algorithm with the permutation algorithm presented in Section \ref{SS - Permutation}. Let $\mu$ denote a ten-dimensional zero vector $(0,0,...,0)'$, and let $I$ denote a $10 \times 10$ identity matrix. We begin with the following normal data-generating process:
+
+\begin{enumerate}
+    \setcounter{enumi}{7}
+    \item Normal i.i.d. errors (ten outcomes)
+    
+    $e \sim \mathcal{N} (\mu,I)$
+    
+    $Y=e$
+\end{enumerate}
+%
+We analyze two distinct treatment assignment processes. The first is simple random assignment at the individual level, where each individual has an equal probability of 0.5 of being assigned to the treatment group. The second is stratified random assignment, in which the population is divided into 10 equally sized strata, and treatment is randomly assigned within each stratum.
+
+Next, we consider clustered random assignment, governed by the following data-generating process:
+
+\begin{enumerate}
+    \setcounter{enumi}{8}
+    \item Clustered random assignment (ten outcomes)
+
+    $i=1...100$ clusters
+    
+    $j=1...10$ units per cluster
+    
+    $\eta_i \sim \mathcal{N} (\mu,I)$
+    
+    $e_{ij} \sim \mathcal{N} (\mu,I)$
+    
+    $Y_{ij}= \eta_i + e_{ij}$
+\end{enumerate}
+%
+Treatment is assigned at the cluster level using simple random assignment, with a 50 percent probability of being assigned to the treatment group.
+
+Table \ref{tab:wyoung4} reports rejection rates for all three scenarios. Without any adjustment, the rejection rates are about 40 percent. Both the Bonferroni-Holm and Sidak-Holm methods effectively control the FWER at approximately 5 percent, as expected in this setting where outcomes are uncorrelated. The Westfall-Young correction achieves rejection rates between 4 and 6 percent when using bootstrapping and slightly tighter control, with rates between 4 and 5 percent, when using permutation. These results suggest that the choice between the two methods does not substantially affect performance in this setting.
+
+
+\begingroup
+\footnotesize
+\setlength{\bibsep}{4pt}
+\setstretch{1}
+\bibliographystyle{chicago}
+\bibliography{wyoung}
+\endgroup
+
+\clearpage
+\input{simulations/tables/wyoung1.tex}
+
+\input{simulations/tables/wyoung2.tex}
+
+\input{simulations/tables/wyoung3.tex}
+
+\input{simulations/tables/wyoung4.tex}
+
+\end{document}
