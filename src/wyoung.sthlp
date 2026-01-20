@@ -79,11 +79,11 @@ If only one {it:varname} is specified, {cmd:wyoung} applies it to all {it:model}
 {cmd:. set seed} {it:#}
 
 {p 4 8 2}
-{cmd:strata(}{help varlist:varlist}{cmd:)} specifies variables that identify identify strata. If {cmd:strata()} is specified, bootstrap/permutation samples are selected within each stratum.
+{cmd:strata(}{help varlist:varlist}{cmd:)} specifies variables that identify strata. If {cmd:strata()} is specified, bootstrap/permutation samples are selected within each stratum.
 
 {p 4 8 2}
 {cmd:cluster(}{help varlist:varlist}{cmd:)} specifies variables that identify clusters.  
-If {cmd:cluster()} is specified, the bootsrap/permutation samples are selected treating each cluster, as defined by {it:varlist}, as one unit of assignment.
+If {cmd:cluster()} is specified, the bootstrap/permutation samples are selected treating each cluster, as defined by {it:varlist}, as one unit of assignment.
 This option is required if {it:model} includes clustered standard errors, unless {cmd:force} is specified.
 See example 3 below.
 
@@ -135,7 +135,7 @@ Specifying {cmd:familypexp} increases the set of possible hypothesis tests, but 
 This method leverages resampling techniques, such as bootstrapping (sampling with replacement) or permutation (shuffling), to adjust the standard {it:p}-values obtained from model estimation. 
 It also computes the Bonferroni-Holm and Sidak-Holm adjusted {it:p}-values.
 
-{p 4 4 2}The family-wise error rate (FWER) is the probability of rejecting at least one true null hypothesis---commonly referred to as making "false discovery"---within a "family" of hypotheses. 
+{p 4 4 2}The family-wise error rate (FWER) is the probability of rejecting at least one true null hypothesis---commonly referred to as making a "false discovery"---within a "family" of hypotheses. 
 A procedure is said to provide {it:strong control} of the FWER if it maintains the error rate at or below a specified level regardless of how many of the hypotheses are true. 
 In contrast, {it:weak control} of the FWER applies only under the assumption that all hypotheses are true, i.e., when the complete null hypothesis holds.
 
@@ -151,8 +151,8 @@ The single-step resampling method, available via the {cmd:singlestep} option, fo
 Detailed documentation, including simulation results, can be found online at {browse "https://reifjulian.github.io/wyoung/documentation/wyoung.pdf":https://reifjulian.github.io/wyoung/documentation/wyoung.pdf}.
 
 {p 4 4 2}The Bonferroni-Holm and Sidak-Holm step-down {it:p}-values are calculated as follows. Sort the {it:J} unadjusted {it:p}-values so that {it:p(1)<p(2)<...<p(J)}. 
-The Bonferroni-Holm adjusted {it:p}-values are calculated as {it:{p(1)*J, max[p(1),p(2)*(J-1)],..., max[p(J-1),p(J)]}}. 
-The Sidak-Holm adjusted {it:p}-values are calculated as {it:{1-(1-p(1))^J, max[p(1),1-(1-p(2))^(J-1)],..., max[p(J-1),p(J)]}}.
+The Bonferroni-Holm adjusted {it:p}-values are calculated as {p(1)*J, max[p(1)*J,p(2)*(J-1)],..., max[p(1)*J,p(2)*(J-1),...,p(J)]}. 
+The Sidak-Holm adjusted {it:p}-values are calculated as {1-(1-p(1))^J, max[1-(1-p(1))^J,1-(1-p(2))^(J-1)],..., max[1-(1-p(1))^J,...,p(J)]}.
 If the calculation yields a value larger than 1, then the adjusted {it:p}-value is set equal to 1.
 
 {p 4 4 2}Following estimation of a model, {cmd:wyoung} obtains unadjusted {it:p}-values from {cmd:r(table)}.
