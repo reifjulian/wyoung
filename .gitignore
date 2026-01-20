@@ -4,3 +4,13 @@
 *.aux
 *.synctex.gz
 *.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+.vscode/
+.idea/
