@@ -538,15 +538,15 @@ program define wyoung, rclass
 
 				cap test `familyp_`k'' == `complete_null'
 				if _rc==131 {
-					cap testnl `familyp_`k'' == `beta_`k''
+					cap testnl `familyp_`k'' == `complete_null'
 					if _rc {
 						noi di as error _n `"`familyp_`k'' is invalid syntax for {cmd:test} and {cmd:testnl}"'
 						error _rc
 					}
 				}
 				else if _rc {
-					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `beta_`k''"' as error " on a bootstrap/permutation sample:"					
-					test `familyp_`k'' == `beta_`k''
+					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `complete_null'"' as error " on a bootstrap/permutation sample:"
+					test `familyp_`k'' == `complete_null'
 				}
 				local pstar_`k' = r(p)
 			}
