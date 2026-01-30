@@ -1,6 +1,6 @@
 # WYOUNG: control the family-wise error rate when performing multiple hypothesis tests
 
-- Current version: `2.0 3dec2024`
+- Current version: `2.0.1 30jan2026`
 - Jump to: [`overview`](#overview) [`installation`](#installation) [`examples`](#examples) [`update history`](#update-history) [`citation`](#citation) 
 
 -----------
@@ -28,14 +28,14 @@ After installing, type `help wyoung` to learn the syntax.
 
 ## Examples
 
-**Example 1.** Estimate a model separately for three outcomes (`mpg`, `headroom`, and `turn`) and calculated adjusted *p*-value for `displacement` (3 hypotheses).
+**Example 1.** Estimate a model separately for three outcomes (`mpg`, `headroom`, and `turn`) and calculate adjusted *p*-value for `displacement` (3 hypotheses).
 ```stata
 sysuse auto.dta, clear
 set seed 20
 wyoung mpg headroom turn, cmd(regress OUTCOMEVAR displacement length) familyp(displacement) reps(100)
 ```
 ![Example 1](images/example1.PNG)
-For each regression, the output provides both unadjusted and adjusted *p*-values for testing the null hypothesis that the coefficient on the variable `displacement` equals 0. For example, in the regression `regress turn displacment length`, the unadjusted *p*-value is 0.09, while the Westfall-Young adjusted *p*-value is 0.14. The `reps(100)` option specifies 100 bootstrap replications, which is the default setting and is omitted in the examples below for simplicity.
+For each regression, the output provides both unadjusted and adjusted *p*-values for testing the null hypothesis that the coefficient on the variable `displacement` equals 0. For example, in the regression `regress turn displacement length`, the unadjusted *p*-value is 0.09, while the Westfall-Young adjusted *p*-value is 0.14. The `reps(100)` option specifies 100 bootstrap replications, which is the default setting and is omitted in the examples below for simplicity.
 
 **Example 2.** Estimate a model separately for three outcomes and for two subgroups defined by `foreign` (3 X 2 = 6 hypotheses).
 ```stata
@@ -67,7 +67,7 @@ wyoung `yvars', cmd(reg OUTCOMEVAR displacement length) familyp(length+50*displa
 
 ### Permutation
 
-By default, `wyoung` uses bootstrapping to resample the data. Alternatively, the `permute()` can be used to perform permutation-based resampling. As with bootstrapping, permutation-based resampling can incorporate stratification and clustering via the `strata()` and `cluster()` options (see Example 5 below). For more complex treatment assignment schemes, users can specify a custom program using the `permuteprogram()` option (see Example 6). In this case, the contents of `permute()` are passed as the first argument to the custom program. Refer to the Stata help file (`help wyoung`) for additional details.
+By default, `wyoung` uses bootstrapping to resample the data. Alternatively, the `permute()` option can be used to perform permutation-based resampling. As with bootstrapping, permutation-based resampling can incorporate stratification and clustering via the `strata()` and `cluster()` options (see Example 5 below). For more complex treatment assignment schemes, users can specify a custom program using the `permuteprogram()` option (see Example 6). In this case, the contents of `permute()` are passed as the first argument to the custom program. Refer to the Stata help file (`help wyoung`) for additional details.
 
 **Example 5.** Perform the Westfall-Young adjustment using permutation with a stratified random sample (3 hypotheses).
 
@@ -105,9 +105,14 @@ wyoung `yvars', cmd(regress OUTCOMEVAR treat) familyp(treat) permute(treat) perm
 ```
 ![Example 6](images/example_permuteprogram.PNG)
 
+Additional examples, including clustered standard errors and different controls for each outcome, are available by typing `help wyoung` in Stata.
+
 ## Update History
+* **2.0.1**
+  - fixed bug affecting `permute()` when performing nonlinear tests
+
 * **2.0**
-  - added `permute()` option. renamed `bootstraps()` option to `reps()` and set default to 100. fixed factor variables bug
+  - added `permute()` and `permuteprogram()` options. renamed `bootstraps()` option to `reps()` and set default to 100. fixed factor variables bug
 
 * **1.3.3**
   - fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)

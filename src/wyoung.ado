@@ -1,4 +1,5 @@
-*! wyoung 2.0 3dec2024 by Julian Reif
+*! wyoung 2.0.1 30jan2026 by Julian Reif
+* 2.0.1: fixed bug affecting permute() when performing nonlinear tests
 * 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps and set default to 100. fixed factor variables bug
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
