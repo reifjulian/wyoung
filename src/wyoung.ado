@@ -1,4 +1,5 @@
-*! wyoung 2.0 3dec2024 by Julian Reif
+*! wyoung 2.0.1 30jan2026 by Julian Reif
+* 2.0.1: fixed bug affecting permute() when performing nonlinear tests
 * 2.0: added permute option (thanks to Adam Sacarny). renamed bootstraps option to reps and set default to 100. fixed factor variables bug
 * 1.3.3: fixed bug where unadjusted p-val was reported assuming normality (affected Stata versions 14 and lower only)
 * 1.3.2: error handling code added for case where user specifies both detail and noresampling
@@ -538,15 +539,15 @@ program define wyoung, rclass
 
 				cap test `familyp_`k'' == `complete_null'
 				if _rc==131 {
-					cap testnl `familyp_`k'' == `beta_`k''
+					cap testnl `familyp_`k'' == `complete_null'
 					if _rc {
 						noi di as error _n `"`familyp_`k'' is invalid syntax for {cmd:test} and {cmd:testnl}"'
 						error _rc
 					}
 				}
 				else if _rc {
-					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `beta_`k''"' as error " on a bootstrap/permutation sample:"					
-					test `familyp_`k'' == `beta_`k''
+					noi di as error _n "The following error occurred when running the command " as result `"test `familyp_`k'' == `complete_null'"' as error " on a bootstrap/permutation sample:"
+					test `familyp_`k'' == `complete_null'
 				}
 				local pstar_`k' = r(p)
 			}

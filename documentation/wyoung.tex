@@ -1,3 +1,27 @@
+
+%%%%%%%%%%%%%%%%%%%%
+% GIT INSTRUCTIONS
+%%%%%%%%%%%%%%%%%%%%
+
+%   1. In Overleaf: Profile → Account Settings → Git → generate/copy your Git token    %   2. In repo root, add the Overleaf remote:
+%        git remote add overleaf https://git@git.overleaf.com/673278508029fac3e24d1bcd 
+%   3. Authenticate once:                                                              
+  %        git subtree pull --prefix=documentation overleaf master --squash
+  %      When prompted:
+  %        Username: git
+  %        Password: your Overleaf Git token
+
+%%%
+% PULL changes from Overleaf → repo
+%%%
+%   git subtree pull --prefix=documentation overleaf master --squash
+    
+
+%%%
+% PUSH changes from repo → Overleaf
+%%%
+%   git subtree push --prefix=documentation overleaf master
+
 \documentclass[letterpaper,12pt]{article}
 \usepackage[utf8]{inputenc}
 
@@ -99,7 +123,7 @@ The bootstrapping procedure involves the following steps:
     
     \item Repeat step 2 $N$ times. For each bootstrap sample $i$ and hypothesis $k$, define the indicator $COUNT_{ik}=1$ if $q^\ast_{ik} \leq p_{k}$ and 0 otherwise.%
     %
-    \footnote{To compute ``single-step'' $p$-values instead of ``step-down'' $p$-values, define the indicator $COUNT_{ik}=1$ if $\min \{p^\ast_{i1},p^\ast_{i2},...,p^\ast_{iK}\}<p_k$ and 0 otherwise. Resampling-based single-step methods often control family-wise type III (sign) error rates. Whether their step-down counterparts also control type III error rates is unknown \citep[][p. 51]{Westfall:1993}.}
+    \footnote{To compute ``single-step'' $p$-values instead of ``step-down'' $p$-values, define the indicator $COUNT_{ik}=1$ if $\min \{p^\ast_{i1},p^\ast_{i2},...,p^\ast_{iK}\} \leq p_k$ and 0 otherwise. Resampling-based single-step methods often control family-wise type III (sign) error rates. Whether their step-down counterparts also control type III error rates is unknown \citep[][p. 51]{Westfall:1993}.}
     %
     
     \item For each hypothesis $k=1,2,...,K$, calculate the fraction of successive minima that were lower than the original $p$-value: 
